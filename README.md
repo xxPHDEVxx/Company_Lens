@@ -7,7 +7,6 @@ CompanyLens est une plateforme web qui permet d’effectuer une recherche détai
 - Recherche par numéro de TVA  
 - Agrégation automatique des données issues de plusieurs sources officielles  
 - Affichage clair et responsive des informations sur une interface web moderne  
-- Mise à jour dynamique des données et rafraîchissement automatisé
 
 ## Stack technique
 
