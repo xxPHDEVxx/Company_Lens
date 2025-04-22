@@ -1,123 +1,199 @@
-from tools.utils import *
-from tools.scraper import CompanyScraper
-from tools.format import *
-from config.config import *
+from src.company_scraper.tools.financial_data_extractor import *
+from src.company_scraper.tools.establishment_units_extractor import *
+from src.company_scraper.tools.general_information_extractor import *
+from src.company_scraper.tools.format import *
+from src.company_scraper.config.config import *
+from concurrent.futures import ThreadPoolExecutor
 
 
-def get_urls_to_scrape(fields: dict, urls: List[str]) -> List[str]:
+class CompanyDataExtractor:
     """
-    Return a list of URLs by replacing placeholders with data.
+    A class responsible for extracting company data based on a given VAT number.
+    It retrieves financial data, address details, and relevant web content.
     """
-    vat_number = fields.get("vat_number")
-    if not vat_number or not is_valid_vat(vat_number):
-        return []
-    final_urls = [
-        (
-            url.format(vat_number=vat_number) if is_kbo(url)
-            else url.format(vat_number=format_vat(vat_number)))
-        for url in urls
-    ]
-    return final_urls
 
+    def __init__(self, vat_number: str):
+        """
+        Initializes the company data extractor with the provided VAT number.
 
-def complete_address(adress_schema: AddressSchema):
-    if adress_schema:
-        # Retrieve address information from an external source
-        address_data = get_data_from_address(adress_schema.full_address) or {}
+        :param vat_number: VAT number of the company (as a string).
+        """
+        if not vat_number:
+            raise ValueError("VAT number cannot be empty.")
 
-        # Update address fields with retrieved data, using default values if keys are missing
-        adress_schema.country = address_data.get("country", "")
-        adress_schema.province = address_data.get("province", "")
-        adress_schema.region = address_data.get("region", "")
+        if not isinstance(vat_number, str):
+            raise TypeError("VAT number must be a string.")
 
-        # If the region is still empty, try to determine it based on the postal code
-        if not adress_schema.region and adress_schema.postal_code:
-            region = find_region(adress_schema.postal_code)
-            if region:
-                adress_schema.region = region
+        vat_number = vat_number.strip()
 
-def complete_financial(company_schema: CompanySchema):
-    if company_schema:
-        data = get_size_and_financial_data(company_schema.vat_number)
-        company_schema.financial.company_size = data[0]
-        company_schema.financial.number_of_employees = int(data[1]["employees"])
-        company_schema.financial.gross_margin = int(data[1]["gross margin"])
+        if not re.match(r"^\d{10}$", vat_number):
+            raise ValueError("VAT number must be a 10-digit number.")
 
+        self.vat_number = vat_number
+        self.company_schema = CompanySchemaWrapper()
 
-def make_llm_ready_content(url: str) -> str:
-    """
-    Fetches web content from a given URL and converts it into Markdown format,
-    making it suitable for processing by a Large Language Model (LLM).
+    def complete_full_address(self):
+        addr = self.company_schema.raw_data.get("address", {})
+        if all(addr.get(k) for k in ("street", "street_number", "postal_code", "city")):
+            addr["full_address"] = (
+                f"{addr['street']} {addr['street_number']}, {addr['postal_code']} {addr['city']}"
+            )
 
-    :param url: The URL of the web page to retrieve.
-    :return: A string containing the cleaned and formatted content in Markdown.
-    """
-    scraper = CompanyScraper(AsyncHtmlLoader)
-    documents = scraper.run(url)  # Load HTML content from the URL.
+    def complete_address(self):
+        """
+        Fills in missing address details by retrieving additional data from an external source.
+        """
+        try:
+            address_schema = self.company_schema.raw_data.get("address", {})
+            if not address_schema:
+                logging.warning("No address schema found in raw_data.")
+                return
 
-    # Apply the correct formatting function
-    if is_company_tracker(url):
-        documents = company_tracker_format(documents)
-    elif is_kbo(url):
-        documents = kbo_format(documents)
+            self.complete_full_address()
+            full_address = address_schema.get("full_address")
+            if not full_address:
+                logging.warning("No full_address found in address schema.")
+                return
 
-    # Convert formatted content to Markdown
-    ready_content = convert_html_to_markdown(documents)
+            address_data = get_data_from_address(full_address) or {}
+            address_schema["country"] = address_data.get("country", "")
+            address_schema["province"] = address_data.get("province", "")
 
-    return ready_content[0].page_content if ready_content else ""
+            postal_code = address_schema.get("postal_code")
+            if postal_code:
+                region = find_region(postal_code)
+                if region:
+                    address_schema["region"] = region
+                else:
+                    logging.info(f"No region found for postal code: {postal_code}")
+            else:
+                logging.warning("No postal_code provided in address schema.")
 
+        except Exception as e:
+            logging.error(f"Error in complete_address: {e}", exc_info=True)
 
-def parallel_execution(urls: List[str]) -> str:
-    """
-    Perform parallel web scraping using multiple threads.
+    def complete_financial_and_size(self) -> dict:
+        """
+        Fetches financial data for the company.
 
-    param urls: A list of URLs to scrape.
-    return: A single concatenated string containing the content of all scraped pages.
-    """
-    results = []
-    if len(urls) > 0:
-        max_workers = min(10, len(urls))  # Limit number of workers to 10
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            results = list(
-                executor.map(make_llm_ready_content, urls)
-            )  # Execute load_web_content in parallel
-    return "\n\n---\n\n".join(results)  # Merge all extracted contents with separators
+        :return: A FinancialSchema object with extracted data.
+        """
+        financial_process_data = get_size_and_financial_data(self.vat_number)
+        annual_account = financial_process_data.annual_account
+        return {
+            "size": financial_process_data.size,
+            "financial_data": {
+                "number_of_employees": int(annual_account.employees),
+                "gross_margin": int(annual_account.gross_margin),
+            },
+        }
 
+    def complete_establishment_units(self) -> EstablishmentUnitData:
+        """
+        Retrieves the list of establishment units.
 
-def extract_company_data(scraped_content: str):
-    """
-    Extract structured company data from raw scraped text using a Language Model (LLM).
+        :return: List of establishment units or the html for the llm.
+        """
+        establishment_units_data = get_units_data(self.vat_number)
+        return establishment_units_data
 
-    param scraped_content: The raw textual content extracted from the web.
-    param llm: The LLM instance (BaseChatModel) used to process and extract structured data.
+    # Return entity informations in markdown format for the LLM
+    def complete_general_information(self):
+        return get_entity_information(self.vat_number)
 
-    return: A `CompanySchema` object containing structured company information.
-    """
-    # Extract data and complete schema
-    model = LLM.GPT_3_5_TURBO.with_structured_output(CompanySchema)
-    chain =  Prompt.EXTRACT_LEGAL_DATA| model
-    company_schema = chain.invoke({"input": scraped_content})
+    def complete_schema(self, financial_and_size, units):
+        self.complete_address()
 
-    # Complexe missing address data
-    complete_address(company_schema.address)
-    complete_financial(company_schema)
-    return company_schema
+        if financial_and_size:
+            self.company_schema.raw_data["finance"] = financial_and_size[
+                "financial_data"
+            ]
+            self.company_schema.raw_data["company_size"] = financial_and_size["size"]
+        if units:
+            self.company_schema.raw_data["establishment_units"] = units
 
+    def parallel_execution(self) -> LegalDataProcess:
+        """
+        Executes financial, general information, and establishment units methods in parallel.
 
-@traceable
-def get_company_schema(fields) -> CompanySchema:
-    """
-    Retrieves and processes company data based on given input fields -> vat_number.
+        Runs the three methods concurrently using ThreadPoolExecutor, handles exceptions and timeouts,
+        and processes the results. Returns:
+        - Financial data (or None),
+        - Establishment units as a list,
+        - Concatenated string (`llm_content`) from general info and establishment units (text parts).
 
-    :param fields (dict): A dictionary containing necessary input values,
-                       such as a VAT number or additional parameters.
+        :return: LegalDataProcess schema
+        """
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            # Define tasks and submit them
+            tasks = {
+                "financial_data_and_size": executor.submit(
+                    self.complete_financial_and_size
+                ),
+                "general_info": executor.submit(self.complete_general_information),
+                "establishment_units": executor.submit(
+                    self.complete_establishment_units
+                ),
+            }
+            # Collect results with error handling
+            results = {}
+            for name, future in tasks.items():
+                try:
+                    results[name] = future.result(timeout=30)
+                except Exception as e:
+                    results[name] = (
+                        None if name == "financial_data" else f"Error in {name}: {e}"
+                    )
 
-    :return dict or None: A structured company schema if data is successfully extracted,
-                      otherwise `None`.
-    """
-    scraping_urls = get_urls_to_scrape(fields, URLS)
-    llm_ready_content = parallel_execution(scraping_urls)
-    company_schema = extract_company_data(llm_ready_content)
-    if not company_schema:
-        return None
-    return company_schema
+        # Extract individual results
+        financial_data_and_size = results["financial_data_and_size"]
+        general_info = results["general_info"]
+        establishment_units = EstablishmentUnitData.model_validate(
+            results["establishment_units"]
+        )
+
+        # Prepare LLM content from text parts
+        llm_parts = [
+            part
+            for part in [general_info, establishment_units.html_content]
+            if isinstance(part, str) and part.strip()
+        ]
+        llm_content = "\n---\n".join(llm_parts) if llm_parts else None
+
+        return LegalDataProcess(
+            financial_data_and_size=financial_data_and_size,
+            establishment_units_list=establishment_units.units,
+            llm_content=llm_content,
+        )
+
+    @traceable
+    def extract_company_data(self, scraped_content: str):
+        """
+        Extracts structured company data from raw web content using an LLM model.
+
+        :param scraped_content: The raw textual content extracted from the web.
+        """
+        model = LLM.GPT_4O_MINI.with_structured_output(self.company_schema.raw_data)
+        chain = Prompt.EXTRACT_LEGAL_DATA | model
+        self.company_schema.raw_data = chain.invoke(
+            {"input": scraped_content}
+        )  # get the dict for the wrapper
+
+    @traceable
+    def get_company_schema(self) -> CompanySchema:
+        """
+        Orchestrates the entire process to retrieve and process company data.
+
+        :return: A structured CompanySchema object if data is successfully extracted, otherwise None.
+        """
+        legal_data_process = self.parallel_execution()
+        if legal_data_process.llm_content:
+            self.extract_company_data(legal_data_process.llm_content)
+
+        # Complete missing details
+        self.complete_schema(
+            legal_data_process.financial_data_and_size,
+            legal_data_process.establishment_units_list,
+        )
+
+        return self.company_schema

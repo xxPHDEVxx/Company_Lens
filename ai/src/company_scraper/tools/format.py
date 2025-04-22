@@ -1,12 +1,13 @@
 from langchain_community.document_transformers import MarkdownifyTransformer
-from .utils import safe_execution
+from langchain.schema import Document
+from src.company_scraper.tools.utils import safe_execution
 import re
-from config.config import *
+from src.company_scraper.config.config import *
 transformer = MarkdownifyTransformer()
 
 
 # Needs review and improvement for better performance
-def kbo_format(documents):
+def kbo_entity_format(documents):
     """
     Formats the HTML from the Belgian Company Database (BCE), keeping tables but removing all links.
 
@@ -29,12 +30,8 @@ def kbo_format(documents):
     for tag in soup.find_all(class_="upd"):
         tag.string = "|" # Correct issues with the markdownify
 
-    # Modify the text "Type d'entité:" to "Company type:"
-    for td in soup.find_all("td"):
-        if "Type d'entité:" in td.text:
-            td.string = td.text.replace("Type d'entité:", "Company type:")
-        elif "Dénomination:" in td.text:
-            td.string = "Name"
+    for tag in soup.find_all("sup"):
+        tag.decompose()
 
     # Add Nacebel code for easier LLM extraction
     for table in soup.select('table:has(td.I h2:-soup-contains("Activités"))'):
@@ -61,44 +58,18 @@ def kbo_format(documents):
     documents[0].page_content = "".join(cleaned_content)
     return documents
 
-
-# Needs review and improvement for better performance
-def company_tracker_format(documents):
-    """
-    Formats the HTML from the companyTracker website.
-    Extracts the first two <div> elements with the class 'panel-body' from the given HTML
-    and returns a formatted HTML containing only these two <div> elements.
-
-    :param documents: List of documents containing the HTML content to be formatted.
-    :return: A list of documents with formatted HTML containing only the first two <div class="panel-body"> elements.
-    """
+def kbo_establishment_units_format(documents) -> str:
     html = documents[0].page_content
     soup = BeautifulSoup(html, "html.parser")
 
-    # Find all <div> elements with the class 'panel-body'
-    panel_primary = soup.find_all("div", class_="panel panel-primary")
+    # Delete header and footer
+    for tag in soup.find_all(["header", "footer"]):
+        tag.decompose()
 
-    # Create a new HTML with the first two <div> elements
-    documents[0].page_content = "".join(str(div) for div in panel_primary)
-    return documents
-
-
-def is_kbo(url):
-    """
-    Checks if the given URL corresponds to the KBO (Crossroads Bank for Enterprises) website.
-    """
-    return url.startswith("https://kbopub.economie.fgov.be/")
-
-
-def is_company_tracker(url):
-    """
-    Checks if the given URL corresponds to the CompanyTracker website.
-    """
-    return url.startswith("https://www.companytracker.be/fr/")
-
+    return str(soup)
 
 @safe_execution
-def convert_html_to_markdown(documents: List[object]) -> List[object]:
+def convert_html_to_markdown(documents: List[object]) -> List[Document]:
     """
     Converts a list of HTML documents into Markdown format.
 
@@ -132,17 +103,17 @@ def is_aggregator(url: str, vat_number: str, company_name: str) -> bool:
     domain = parsed_url.netloc.replace("www.", "").casefold()
     path = parsed_url.path
 
-    # Vérifie si le domaine est dans la liste des agrégateurs
+    # Check if domain into aggregators list
     if domain in AGGREGATORS_DOMAINS:
         return True
 
-    # Vérifie si le numéro de TVA est présent dans le chemin de l'URL
+    # Check if vat number into url path
     if is_valid_vat(vat_number):
         formatted_vat = format_vat(vat_number)
         if vat_number in path or formatted_vat in path:
             return True
 
-    # Vérifie si le chemin de l'URL contient le nom de l'entreprise (sans espaces, tirets et underscores)
+    # Check if company name into path (without spaces and specials characters)
     normalized_company_name = re.sub(r"[^a-zA-Z0-9]", "", company_name.casefold())
     normalized_path = re.sub(r"[^a-zA-Z0-9]", "", path.casefold())
 

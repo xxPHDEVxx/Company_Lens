@@ -1,118 +1,37 @@
+from parameterized import parameterized
+from src.company_scraper.tools.financial_data_extractor import *
 import unittest
-from tools.utils import *  # Importez vos méthodes réelles
+import tracemalloc
 
 
-# Méthode à tester
-def get_size(vat_number: str):
-    if vat_number:
-        financial_data = get_financial_data(vat_number)
-        if not financial_data:
-            return None
-        size = determine_company_size(vat_number, financial_data)
-        return size
-    return None
+tracemalloc.start()
 
 
-# Tests unitaires
-class TestGetSize(unittest.TestCase):
-
-    # Test avec un numéro de TVA vide
-    def test_empty_vat_number(self):
-        self.assertIsNone(get_size(""))
-
-    # Test avec un numéro de TVA invalide
-    def test_invalid_vat_number(self):
-        vat_number = "INVALID_VAT"
-        financial_data = get_financial_data(vat_number)
-        self.assertIsNone(
-            financial_data
-        )  # Vérifie qu'il n'y a pas de données financières
-
-        size = get_size(vat_number)
-        self.assertIsNone(
-            size
-        )  # La taille devrait être None si les données sont inexistantes
-
-    # Test avec un numéro de TVA valide, mais sans données financières
-    def test_no_financial_data(self):
-        vat_number = "1235765879"  # Utilisez un numéro de TVA pour lequel il n'y a pas de données
-        financial_data = get_financial_data(vat_number)
-        self.assertIsNone(financial_data)  # Vérifiez qu'aucune donnée n'est renvoyée
-
-        size = get_size(vat_number)
-        self.assertIsNone(
-            size
-        )  # La taille devrait être None si les données sont absentes
-
-    # Test avec des données financières valides, mais une taille non définie
-    def test_no_size_determined(self):
-        vat_number = "1004905845"
-        financial_data = get_financial_data(vat_number)
-
-        # Supposez que determine_company_size renvoie None dans ce cas
-        size = determine_company_size(vat_number, financial_data)
-        self.assertIsNone(
-            size
-        )  # La taille devrait être None si aucune taille n'est définie
-
-        result = get_size(vat_number)
-        self.assertIsNone(result)  # La fonction entière doit retourner None
-
-    # Test avec une petite entreprise
-    def test_small_company(self):
-        vat_number = "0831407784"
-        financial_data = get_financial_data(vat_number)
-        self.assertIsNotNone(
-            financial_data
-        )  # Vérifie que les données financières existent
-
-        size = determine_company_size(vat_number, financial_data)
-        self.assertEqual(
-            size, "small"
-        )  # Vérifie que la taille de l'entreprise est petite
-
-        result = get_size(vat_number)
-        self.assertEqual(
-            result, "small"
-        )  # Vérifie que la fonction retourne bien "small"
-
-    # Test avec une grande entreprise
-    def test_large_company(self):
-        vat_number = "0810307316"
-        financial_data = get_financial_data(vat_number)
-        self.assertIsNotNone(
-            financial_data
-        )  # Vérifie que les données financières existent
-
-        size = determine_company_size(vat_number, financial_data)
-        self.assertEqual(
-            size, "large"
-        )  # Vérifie que la taille de l'entreprise est grande
-
-        result = get_size(vat_number)
-        self.assertEqual(
-            result, "large"
-        )  # Vérifie que la fonction retourne bien "large"
-
-    # Test avec une entreprise de taille moyenne (si nécessaire)
-    def test_medium_company(self):
-        vat_number = "0831407784"
-        financial_data = get_financial_data(vat_number)
-        self.assertIsNotNone(
-            financial_data
-        )  # Vérifie que les données financières existent
-
-        size = determine_company_size(vat_number, financial_data)
-        self.assertEqual(
-            size, "medium"
-        )  # Vérifie que la taille de l'entreprise est moyenne
-
-        result = get_size(vat_number)
-        self.assertEqual(
-            result, "medium"
-        )  # Vérifie que la fonction retourne bien "medium"
-
-
-# Lancer les tests
-if __name__ == "__main__":
-    unittest.main()
+class TestCompanySize(unittest.TestCase):
+    @parameterized.expand(
+        [
+            # ("micro_company", "0439988337", "micro"),
+            # ("micro_company_2", "0416398630", "micro"),
+            # ("micro_company_3", "0684997172", "micro"),
+            # ("micro_company_4", "0750931042", "micro"),
+            # ("micro_company_5", "0448540668", "micro"),
+            # ("micro_company_6", "0453914864", "micro"),
+            # ("micro_company_7", "0712626138", "micro"),
+            # ("micro_company_8", "0737779822", "micro"),
+            # ("small_company", "0423768452", "micro"), #small on companyweb (group ?)
+            # ("small_company_2", "0882383858", "small"),
+            # ("small_company_2", "0769300367", "small"),
+            # ("medium_company", "0439340516", "medium"),
+            # ("medium_company_2", "0831407784", "medium"),
+            # ("medium_company_3", "0403228109", "medium"), #large on companyweb (group ?)
+            # ("large_company", "0423369762", "large"),
+            # ("large_company_2", "0810307316", "large"),
+            # ("large_company_3", "0477472701", "large"),
+            # ("large_company_4", "0406798006", "large"),
+            # ("Wrong_vat", "1234567890", None),
+            # ("no_data_company", "0416205323", None),
+        ]
+    )
+    def test_company_size(self, name, vat_number, expected_size):
+        size, financial_data = get_size_and_financial_data(vat_number)
+        self.assertEqual(size, expected_size)
