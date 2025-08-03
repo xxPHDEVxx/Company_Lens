@@ -1,12 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSidebar } from '../../contexts/SidebarContext';
 
 const DashboardSidebar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [activeItem, setActiveItem] = useState('analytique');
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Determine active item based on current route
+  const getActiveItem = () => {
+    const path = location.pathname;
+    if (path === '/recherche') return 'recherche';
+    if (path === '/groupes') return 'groupes';
+    if (path === '/suivi') return 'suivi';
+    if (path === '/historique') return 'historique';
+    return 'analytique'; // default for /dashboard
+  };
+
+  const activeItem = getActiveItem();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -25,6 +38,7 @@ const DashboardSidebar = () => {
     {
       id: 'recherche',
       label: 'Recherche',
+      route: '/recherche',
       color: 'emerald',
       activeColor: 'bg-emerald-600/20 text-emerald-400 border-emerald-500',
       hoverColor: 'hover:text-emerald-400',
@@ -40,6 +54,7 @@ const DashboardSidebar = () => {
     {
       id: 'groupes',
       label: 'Groupes',
+      route: '/groupes',
       color: 'purple',
       activeColor: 'bg-purple-600/20 text-purple-400 border-purple-500',
       hoverColor: 'hover:text-purple-400',
@@ -55,6 +70,7 @@ const DashboardSidebar = () => {
     {
       id: 'suivi',
       label: 'Suivi',
+      route: '/suivi',
       color: 'orange',
       activeColor: 'bg-orange-600/20 text-orange-400 border-orange-500',
       hoverColor: 'hover:text-orange-400',
@@ -71,6 +87,7 @@ const DashboardSidebar = () => {
     {
       id: 'historique',
       label: 'Historique',
+      route: '/historique',
       color: 'gray',
       activeColor: 'bg-gray-600/20 text-gray-400 border-gray-500',
       hoverColor: 'hover:text-gray-400',
@@ -86,6 +103,7 @@ const DashboardSidebar = () => {
     {
       id: 'analytique',
       label: 'Analytique',
+      route: '/dashboard',
       color: 'blue',
       activeColor: 'bg-blue-600/20 text-blue-400 border-blue-500',
       hoverColor: 'hover:text-blue-400',
@@ -99,6 +117,10 @@ const DashboardSidebar = () => {
       ),
     },
   ];
+
+  const handleNavigation = (route: string) => {
+    navigate(route);
+  };
 
   return (
     <div className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col shadow-2xl backdrop-blur-lg border-r border-slate-700/50 transition-all duration-300 ease-in-out z-50 ${
@@ -148,7 +170,7 @@ const DashboardSidebar = () => {
         {navigationItems.map((item) => (
           <div key={item.id} className="relative group">
             <button
-              onClick={() => setActiveItem(item.id)}
+              onClick={() => handleNavigation(item.route)}
               className={`w-full flex items-center ${isCollapsed ? 'justify-center px-2' : 'space-x-3 px-4'} py-3 rounded-xl font-medium text-sm transition-all duration-200 relative ${
                 activeItem === item.id
                   ? item.activeColor + ' shadow-lg border-l-4'
