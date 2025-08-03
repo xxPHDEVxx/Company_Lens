@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Recherche from './pages/Recherche';
 import Groupes from './pages/Groupes';
 import Suivi from './pages/Suivi';
+import Historique from './pages/Historique';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { SidebarProvider } from './contexts/SidebarContext';
 
@@ -14,7 +15,8 @@ function AppContent() {
   const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
                            location.pathname === '/recherche' || 
                            location.pathname === '/groupes' || 
-                           location.pathname === '/suivi';
+                           location.pathname === '/suivi' ||
+                           location.pathname === '/historique';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -40,6 +42,7 @@ function AppContent() {
         <Route path="/recherche" element={<Recherche />} />
         <Route path="/groupes" element={<Groupes />} />
         <Route path="/suivi" element={<Suivi />} />
+        <Route path="/historique" element={<Historique />} />
       </Routes>
     </div>
   );
