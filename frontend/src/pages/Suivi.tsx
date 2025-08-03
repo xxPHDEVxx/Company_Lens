@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import DashboardSidebar from '../components/dashboard/DashboardSidebar';
-import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
+import { useSidebar } from '../contexts/SidebarContext';
 
 interface FollowedCompany {
   id: string;
@@ -381,11 +381,7 @@ const SuiviContent: React.FC = () => {
 };
 
 const Suivi: React.FC = () => {
-  return (
-    <SidebarProvider>
-      <SuiviContent />
-    </SidebarProvider>
-  );
+  return <SuiviContent />;
 };
 
 export default Suivi;
