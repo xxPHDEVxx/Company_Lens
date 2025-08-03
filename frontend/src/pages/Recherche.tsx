@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import DashboardSidebar from '../components/dashboard/DashboardSidebar';
-import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
+import { useSidebar } from '../contexts/SidebarContext';
 
 // Company types from AI schema
 const companyTypes = [
@@ -53,10 +53,6 @@ const RechercheContent: React.FC = () => {
       // Here would be the actual search implementation
       console.log('Recherche avec filtres:', filters);
     }, 2000);
-  };
-
-  const handleExampleSearch = (vatNumber: string) => {
-    setFilters(prev => ({ ...prev, vatNumber }));
   };
 
   const clearFilters = () => {
@@ -222,11 +218,7 @@ const RechercheContent: React.FC = () => {
 };
 
 const Recherche: React.FC = () => {
-  return (
-    <SidebarProvider>
-      <RechercheContent />
-    </SidebarProvider>
-  );
+  return <RechercheContent />;
 };
 
 export default Recherche;
