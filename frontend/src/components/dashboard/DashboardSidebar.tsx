@@ -3,8 +3,6 @@ const DashboardSidebar = () => {
     <div className="h-screen sticky top-0 flex pl-8">
       <nav className="flex flex-col h-full py-24 w-full space-y-8">
 
-        {/* Separator */}
-                <div className="h-px bg-gray-200 w-full my-8"></div>
 
         {/* Recherche d'entreprise */}
         <a
@@ -59,8 +57,6 @@ const DashboardSidebar = () => {
           <span>Historique</span>
         </a>
 
-        {/* Separator */}
-        <div className="h-px bg-gray-200 w-full my-8"></div>
 
       </nav>
     </div>
