@@ -7,6 +7,7 @@ import Recherche from './pages/Recherche';
 import Groupes from './pages/Groupes';
 import Suivi from './pages/Suivi';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { SidebarProvider } from './contexts/SidebarContext';
 
 function AppContent() {
   const location = useLocation();
@@ -47,7 +48,9 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <SidebarProvider>
+        <AppContent />
+      </SidebarProvider>
     </Router>
   );
 }

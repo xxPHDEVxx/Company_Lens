@@ -2,7 +2,7 @@ import DashboardSidebar from '../components/dashboard/DashboardSidebar';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
 import CompanyInfo from '../components/dashboard/CompanyInfo';
 import RecentSearches from '../components/dashboard/RecentSearches';
-import { SidebarProvider, useSidebar } from '../contexts/SidebarContext';
+import { useSidebar } from '../contexts/SidebarContext';
 
 const DashboardContent = () => {
   const { isCollapsed } = useSidebar();
@@ -32,11 +32,7 @@ const DashboardContent = () => {
 };
 
 const Dashboard = () => {
-  return (
-    <SidebarProvider>
-      <DashboardContent />
-    </SidebarProvider>
-  );
+  return <DashboardContent />;
 };
 
 export default Dashboard;
