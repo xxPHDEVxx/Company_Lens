@@ -8,24 +8,26 @@ const DashboardContent = () => {
   const { isCollapsed } = useSidebar();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 mx-auto">
       {/* Sidebar Container */}
       <div className="hidden md:block">
         <DashboardSidebar />
       </div>
 
-      {/* Main Content Container - Dynamic left margin based on sidebar state */}
+      {/* Main Content Container - Fixed centered layout with equal spacing */}
       <div className={`transition-all duration-300 ${
-        isCollapsed ? 'md:pl-32' : 'md:pl-72'
-      } pr-4 md:pr-8 lg:pr-12 py-8`}>
-        {/* Welcome Section */}
-        <WelcomeSection />
+        isCollapsed ? 'md:ml-28' : 'md:ml-64'
+      }`}>
+        <div className="px-6 md:px-8 lg:px-12 pt-20 pb-8 max-w-6xl mx-auto">
+          {/* Welcome Section */}
+          <WelcomeSection />
 
-        {/* Company Information */}
-        <CompanyInfo />
+          {/* Company Information */}
+          <CompanyInfo />
 
-        {/* Recent Searches */}
-        <RecentSearches />
+          {/* Recent Searches */}
+          <RecentSearches />
+        </div>
       </div>
     </div>
   );
