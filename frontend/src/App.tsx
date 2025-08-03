@@ -1,5 +1,5 @@
 import Navbar from './components/Navbar';
-import Home from './pages/Home';
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
@@ -25,7 +25,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={
           <main className="container mx-auto px-4 py-8">
-            <Home />
+            <LandingPage />
           </main>
         } />
         <Route path="/login" element={
