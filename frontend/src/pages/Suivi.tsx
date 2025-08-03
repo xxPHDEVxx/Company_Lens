@@ -151,12 +151,16 @@ const SuiviContent: React.FC = () => {
         <div className="px-6 md:px-8 lg:px-12 pt-20 pb-8 max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Entreprises suivies
-            </h1>
-            <p className="text-gray-600">
-              Surveillez l'évolution des entreprises qui vous intéressent
-            </p>
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-orange-600 to-amber-600 p-8">
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  Entreprises suivies
+                </h1>
+                <p className="text-orange-100">
+                  Surveillez l'évolution des entreprises qui vous intéressent
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Filters and Stats */}
