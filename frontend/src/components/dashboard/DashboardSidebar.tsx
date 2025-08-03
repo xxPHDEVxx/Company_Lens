@@ -40,10 +40,7 @@ const DashboardSidebar = () => {
       id: 'dashboard',
       label: 'Tableau de bord',
       route: '/dashboard',
-      color: 'blue',
       activeColor: 'bg-blue-600/20 text-blue-400 border-blue-500',
-      hoverColor: 'hover:text-blue-400',
-      iconColor: 'text-blue-400',
       iconHoverColor: 'group-hover:text-blue-400',
       indicatorColor: 'bg-blue-500',
       icon: (
@@ -57,10 +54,7 @@ const DashboardSidebar = () => {
       id: 'recherche',
       label: 'Recherche',
       route: '/recherche',
-      color: 'emerald',
       activeColor: 'bg-emerald-600/20 text-emerald-400 border-emerald-500',
-      hoverColor: 'hover:text-emerald-400',
-      iconColor: 'text-emerald-400',
       iconHoverColor: 'group-hover:text-emerald-400',
       indicatorColor: 'bg-emerald-500',
       icon: (
@@ -73,10 +67,7 @@ const DashboardSidebar = () => {
       id: 'groupes',
       label: 'Groupes',
       route: '/groupes',
-      color: 'purple',
       activeColor: 'bg-purple-600/20 text-purple-400 border-purple-500',
-      hoverColor: 'hover:text-purple-400',
-      iconColor: 'text-purple-400',
       iconHoverColor: 'group-hover:text-purple-400',
       indicatorColor: 'bg-purple-500',
       icon: (
@@ -89,10 +80,7 @@ const DashboardSidebar = () => {
       id: 'suivi',
       label: 'Suivi',
       route: '/suivi',
-      color: 'orange',
       activeColor: 'bg-orange-600/20 text-orange-400 border-orange-500',
-      hoverColor: 'hover:text-orange-400',
-      iconColor: 'text-orange-400',
       iconHoverColor: 'group-hover:text-orange-400',
       indicatorColor: 'bg-orange-500',
       icon: (
@@ -106,10 +94,7 @@ const DashboardSidebar = () => {
       id: 'historique',
       label: 'Historique',
       route: '/historique',
-      color: 'gray',
       activeColor: 'bg-gray-600/20 text-gray-400 border-gray-500',
-      hoverColor: 'hover:text-gray-400',
-      iconColor: 'text-gray-400',
       iconHoverColor: 'group-hover:text-gray-400',
       indicatorColor: 'bg-gray-500',
       icon: (
@@ -125,7 +110,7 @@ const DashboardSidebar = () => {
   };
 
   return (
-    <div className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col shadow-2xl backdrop-blur-lg border-r border-slate-700/50 transition-all duration-300 ease-in-out z-50 overflow-hidden ${
+    <div className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col shadow-2xl backdrop-blur-lg border-r border-slate-700/50 transition-all duration-300 ease-in-out z-50 ${
       isCollapsed ? 'w-28' : 'w-64'
     }`}>
       {/* Header with Logo and Toggle */}
@@ -152,7 +137,7 @@ const DashboardSidebar = () => {
             /* Collapsed: */
             <div className="w-full grid items-center h-full">
               <div className="flex justify-center">
-                <Link to="/" className="flex items-center group">
+                <Link to="/dashboard" className="flex items-center group">
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-200">
                     <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
@@ -169,7 +154,7 @@ const DashboardSidebar = () => {
           ) : (
             /* Expanded: Regular flex layout */
             <div className="w-full flex items-center justify-between px-4 h-full">
-              <Link to="/" className="flex items-center group">
+              <Link to="/dashboard" className="flex items-center group">
                 <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-200">
                   <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
@@ -304,7 +289,7 @@ const DashboardSidebar = () => {
           </button>
 
           {/* Tooltip for collapsed state */}
-          {isCollapsed && (
+          {isCollapsed && !isDropdownOpen && (
             <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-3 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg shadow-2xl border border-slate-700/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
               Profil utilisateur
               <div className="absolute right-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-r-4 border-r-slate-800 border-t-4 border-t-transparent border-b-4 border-b-transparent"></div>
@@ -312,8 +297,12 @@ const DashboardSidebar = () => {
           )}
 
           {/* Dropdown Menu */}
-          {isDropdownOpen && !isCollapsed && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-slate-800 rounded-xl shadow-2xl border border-slate-700/50 backdrop-blur-lg overflow-hidden">
+          {isDropdownOpen && (
+            <div className={`absolute bg-slate-800 rounded-xl shadow-2xl border border-slate-700/50 backdrop-blur-lg overflow-hidden z-[100] ${
+              isCollapsed 
+                ? 'left-full bottom-0 ml-3 whitespace-nowrap min-w-[200px]' 
+                : 'bottom-full left-0 right-0 mb-2'
+            }`}>
               <button className="block w-full text-left px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all duration-200">
                 <div className="flex items-center space-x-3">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
