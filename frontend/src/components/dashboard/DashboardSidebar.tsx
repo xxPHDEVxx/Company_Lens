@@ -14,7 +14,7 @@ const DashboardSidebar = () => {
     const path = location.pathname;
     if (path === '/dashboard') return 'dashboard';
     if (path === '/recherche') return 'recherche';
-    if (path === '/groupes') return 'groupes';
+    if (path.startsWith('/groupes')) return 'groupes';  // Matches /groupes and /groupes/:groupId
     if (path === '/suivi') return 'suivi';
     if (path === '/historique') return 'historique';
     return 'dashboard'; // default for /dashboard
