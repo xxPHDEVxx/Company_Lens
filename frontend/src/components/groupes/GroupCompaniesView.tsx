@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Trash2, Plus, Building2, ArrowLeft } from 'lucide-react';
+import { X, Trash2, Plus, Building2, ArrowLeft, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Company {
   id: string;
@@ -33,6 +34,7 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
   onAddCompanies,
   getGroupIcon,
 }) => {
+  const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -53,6 +55,16 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
     if (window.confirm('Êtes-vous sûr de vouloir retirer cette entreprise du groupe ?')) {
       onDeleteCompany(group.id, companyId);
     }
+  };
+  
+  const handleViewCompanyDetails = (companyId: string) => {
+    navigate(`/company/${companyId}`, {
+      state: { 
+        from: 'Groupes', 
+        route: `/groupes/${group.id}`,
+        groupName: group.name 
+      }
+    });
   };
 
   const handleAddCompanies = () => {
@@ -146,6 +158,15 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
               {company.location && (
                 <p className="text-sm text-gray-500">Localisation: {company.location}</p>
               )}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <button
+                  onClick={() => handleViewCompanyDetails(company.id)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+                >
+                  <Eye className="w-4 h-4" />
+                  Voir détails
+                </button>
+              </div>
             </div>
           ))}
         </div>

@@ -15,7 +15,7 @@ const DashboardSidebar = () => {
     if (path === '/dashboard') return 'dashboard';
     if (path === '/recherche') return 'recherche';
     if (path.startsWith('/groupes')) return 'groupes';  // Matches /groupes and /groupes/:groupId
-    if (path === '/suivi') return 'suivi';
+    if (path === '/suivi' || path.startsWith('/company/')) return 'suivi';  // Also match company details
     if (path === '/historique') return 'historique';
     return 'dashboard'; // default for /dashboard
   };
