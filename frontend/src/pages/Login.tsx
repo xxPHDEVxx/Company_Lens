@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authApi } from '../services/api';
 
 const Login = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
   const validateForm = (): boolean => {
     const newErrors: { email?: string; password?: string } = {};
@@ -34,12 +36,26 @@ const Login = () => {
     if (!validateForm()) return;
     
     setIsLoading(true);
+    setErrors({});
     
-    // Simulate API call
-    setTimeout(() => {
-      // Login logic would go here
+    try {
+      const response = await authApi.login(email, password);
+      
+      // Store the token
+      localStorage.setItem('authToken', response.token);
+      
+      // Store user info if remember me is checked
+      if (rememberMe) {
+        localStorage.setItem('userEmail', email);
+      }
+      
+      // Navigate to dashboard
+      navigate('/dashboard');
+    } catch (error) {
+      setErrors({ general: 'Email ou mot de passe incorrect' });
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -113,6 +129,12 @@ const Login = () => {
               </Link>
             </div>
             
+            {errors.general && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-600">{errors.general}</p>
+              </div>
+            )}
+            
             <button
               type="submit"
               disabled={isLoading}
@@ -143,6 +165,12 @@ const Login = () => {
               </span>
             </div>
           </form>
+        </div>
+        
+        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+          <p className="text-sm text-blue-700 text-center">
+            <strong>Demo:</strong> user@example.com / password123
+          </p>
         </div>
         
         <p className="text-center text-sm text-gray-500 mt-8">

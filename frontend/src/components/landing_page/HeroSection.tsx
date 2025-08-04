@@ -1,4 +1,9 @@
-const HeroSection = () => (
+import { useNavigate } from 'react-router-dom';
+
+const HeroSection = () => {
+  const navigate = useNavigate();
+  
+  return (
   <div className="relative overflow-hidden bg-gradient-to-br from-white via-blue-50 to-indigo-100 py-24 sm:py-32">
     {/* Background decorative elements */}
     <div className="absolute inset-0 -z-10">
@@ -55,12 +60,16 @@ const HeroSection = () => (
         </p>
         
         <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button className="group relative px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-opacity-50">
+          <button 
+            onClick={() => navigate('/signup')}
+            className="group relative px-8 py-4 text-lg font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl shadow-lg hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl transform hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-opacity-50">
             <span className="relative z-10">Commencer gratuitement</span>
             <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </button>
           
-          <button className="group px-8 py-4 text-lg font-semibold text-gray-700 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transform hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gray-300 focus:ring-opacity-50">
+          <button 
+            onClick={() => navigate('/login')}
+            className="group px-8 py-4 text-lg font-semibold text-gray-700 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transform hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gray-300 focus:ring-opacity-50">
             <span className="flex items-center">
               <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m-6-8h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2v-8a2 2 0 012-2z" />
@@ -93,6 +102,7 @@ const HeroSection = () => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 export default HeroSection; 

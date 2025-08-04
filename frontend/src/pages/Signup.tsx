@@ -1,22 +1,31 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { authApi } from '../services/api';
 
 const Signup = () => {
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ 
+    name?: string;
     email?: string; 
     password?: string; 
     confirmPassword?: string;
     acceptTerms?: string;
+    general?: string;
   }>({});
 
   const validateForm = (): boolean => {
     const newErrors: typeof errors = {};
+    
+    if (!name) {
+      newErrors.name = 'Le nom est requis';
+    }
     
     if (!email) {
       newErrors.email = 'L\'email est requis';
@@ -52,12 +61,30 @@ const Signup = () => {
     if (!validateForm()) return;
     
     setIsLoading(true);
+    setErrors({});
     
-    // Simulate API call
-    setTimeout(() => {
-      // Signup logic would go here
+    try {
+      const response = await authApi.signup({
+        name,
+        email,
+        password,
+        companyId: '1' // Default to company 1 for now
+      });
+      
+      // Store the token
+      localStorage.setItem('authToken', response.token);
+      
+      // Navigate to dashboard
+      navigate('/dashboard');
+    } catch (error: any) {
+      if (error.message?.includes('already exists')) {
+        setErrors({ email: 'Cet email est déjà utilisé' });
+      } else {
+        setErrors({ general: 'Une erreur est survenue lors de l\'inscription' });
+      }
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -70,6 +97,27 @@ const Signup = () => {
           </div>
           
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nom complet
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (errors.name) setErrors({ ...errors, name: undefined });
+                }}
+                className={`w-full px-4 py-3 border rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  errors.name ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Jean Dupont"
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+              )}
+            </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Adresse email
@@ -159,6 +207,12 @@ const Signup = () => {
                 <p className="mt-1 text-sm text-red-600">{errors.acceptTerms}</p>
               )}
             </div>
+            
+            {errors.general && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-600">{errors.general}</p>
+              </div>
+            )}
             
             <button
               type="submit"
