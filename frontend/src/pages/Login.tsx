@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../services/api';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/dashboard';
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -49,8 +52,8 @@ const Login = () => {
         localStorage.setItem('userEmail', email);
       }
       
-      // Navigate to dashboard
-      navigate('/dashboard');
+      // Navigate to the originally requested page or dashboard
+      navigate(from, { replace: true });
     } catch (error) {
       setErrors({ general: 'Email ou mot de passe incorrect' });
     } finally {

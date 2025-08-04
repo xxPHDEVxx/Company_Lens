@@ -9,6 +9,7 @@ import GroupDetails from './pages/GroupDetails';
 import Suivi from './pages/Suivi';
 import Historique from './pages/Historique';
 import CompanyDetails from './pages/CompanyDetails';
+import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { SidebarProvider } from './contexts/SidebarContext';
 
@@ -42,13 +43,41 @@ function AppContent() {
             <Signup />
           </main>
         } />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/recherche" element={<Recherche />} />
-        <Route path="/groupes" element={<Groupes />} />
-        <Route path="/groupes/:groupId" element={<GroupDetails />} />
-        <Route path="/suivi" element={<Suivi />} />
-        <Route path="/historique" element={<Historique />} />
-        <Route path="/company/:companyId" element={<CompanyDetails />} />
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/recherche" element={
+          <ProtectedRoute>
+            <Recherche />
+          </ProtectedRoute>
+        } />
+        <Route path="/groupes" element={
+          <ProtectedRoute>
+            <Groupes />
+          </ProtectedRoute>
+        } />
+        <Route path="/groupes/:groupId" element={
+          <ProtectedRoute>
+            <GroupDetails />
+          </ProtectedRoute>
+        } />
+        <Route path="/suivi" element={
+          <ProtectedRoute>
+            <Suivi />
+          </ProtectedRoute>
+        } />
+        <Route path="/historique" element={
+          <ProtectedRoute>
+            <Historique />
+          </ProtectedRoute>
+        } />
+        <Route path="/company/:companyId" element={
+          <ProtectedRoute>
+            <CompanyDetails />
+          </ProtectedRoute>
+        } />
       </Routes>
     </div>
   );
