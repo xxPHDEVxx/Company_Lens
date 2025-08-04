@@ -5,6 +5,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Recherche from './pages/Recherche';
 import Groupes from './pages/Groupes';
+import GroupDetails from './pages/GroupDetails';
 import Suivi from './pages/Suivi';
 import Historique from './pages/Historique';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
@@ -15,6 +16,7 @@ function AppContent() {
   const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
                            location.pathname === '/recherche' || 
                            location.pathname === '/groupes' || 
+                           location.pathname.startsWith('/groupes/') ||
                            location.pathname === '/suivi' ||
                            location.pathname === '/historique';
 
@@ -41,6 +43,7 @@ function AppContent() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/recherche" element={<Recherche />} />
         <Route path="/groupes" element={<Groupes />} />
+        <Route path="/groupes/:groupId" element={<GroupDetails />} />
         <Route path="/suivi" element={<Suivi />} />
         <Route path="/historique" element={<Historique />} />
       </Routes>

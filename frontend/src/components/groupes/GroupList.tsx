@@ -53,6 +53,7 @@ const GroupList: React.FC<GroupListProps> = ({
           group={group}
           onDelete={onDeleteGroup}
           onEdit={onEditGroup}
+          onViewCompanies={() => {}}
           getGroupIcon={getGroupIcon}
         />
       ))}

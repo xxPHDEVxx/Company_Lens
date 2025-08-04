@@ -12,6 +12,7 @@ interface CompanyGroup {
   icon?: string;
 }
 
+
 // Mock data for company groups
 const mockGroups: CompanyGroup[] = [
   {

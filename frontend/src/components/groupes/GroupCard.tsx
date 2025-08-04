@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface CompanyGroup {
   id: string;
@@ -13,16 +14,23 @@ interface GroupCardProps {
   group: CompanyGroup;
   onDelete: (groupId: string) => void;
   onEdit: (group: CompanyGroup) => void;
+  onViewCompanies: (group: CompanyGroup) => void;
   getGroupIcon: (iconKey?: string) => React.ReactNode;
 }
 
-const GroupCard: React.FC<GroupCardProps> = ({ group, onDelete, onEdit, getGroupIcon }) => {
+const GroupCard: React.FC<GroupCardProps> = ({ group, onDelete, onEdit, onViewCompanies, getGroupIcon }) => {
+  const navigate = useNavigate();
+  
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-BE', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
+  };
+  
+  const handleViewCompanies = () => {
+    navigate(`/groupes/${group.id}`);
   };
 
   return (
@@ -81,7 +89,10 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, onDelete, onEdit, getGroup
 
       {/* Actions */}
       <div className="pt-4 border-t border-gray-100">
-        <button className="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors duration-200 text-sm font-medium">
+        <button 
+          onClick={handleViewCompanies}
+          className="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors duration-200 text-sm font-medium"
+        >
           Voir les entreprises
         </button>
       </div>
