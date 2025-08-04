@@ -1,26 +1,13 @@
 import React from 'react';
-
-interface FollowedCompany {
-  id: string;
-  name: string;
-  vatNumber: string;
-  legalForm: string;
-  sector: string;
-  city: string;
-  region: 'flanders' | 'wallonia' | 'brussels';
-  status: 'active' | 'inactive';
-  followedSince: string;
-  lastUpdate: string;
-  employeeCount?: number;
-  website?: string;
-}
+import type { Company } from '../../types/api';
 
 interface CompanyStatsProps {
-  followedCompanies: FollowedCompany[];
+  followedCompanies: Company[];
 }
 
 const CompanyStats: React.FC<CompanyStatsProps> = ({ followedCompanies }) => {
   const recentlyUpdated = followedCompanies.filter(c => {
+    if (!c.lastUpdate) return false;
     const lastUpdate = new Date(c.lastUpdate);
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);

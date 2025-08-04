@@ -1,24 +1,10 @@
 import React from 'react';
 import CompanyCard from './CompanyCard';
 import { getStatusBadge, getRegionBadge } from './CompanyBadges';
-
-interface FollowedCompany {
-  id: string;
-  name: string;
-  vatNumber: string;
-  legalForm: string;
-  sector: string;
-  city: string;
-  region: 'flanders' | 'wallonia' | 'brussels';
-  status: 'active' | 'inactive';
-  followedSince: string;
-  lastUpdate: string;
-  employeeCount?: number;
-  website?: string;
-}
+import type { Company } from '../../types/api';
 
 interface CompanyListProps {
-  companies: FollowedCompany[];
+  companies: Company[];
   onUnfollow: (companyId: string) => void;
 }
 

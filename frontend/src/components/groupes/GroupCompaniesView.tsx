@@ -1,22 +1,10 @@
 import React, { useState } from 'react';
 import { X, Trash2, Plus, Building2, ArrowLeft, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-interface Company {
-  id: string;
-  name: string;
-  vatNumber: string;
-  sector?: string;
-  location?: string;
-}
+import type { Company, CompanyGroup } from '../../types/api';
 
 interface GroupCompaniesViewProps {
-  group: {
-    id: string;
-    name: string;
-    description: string;
-    icon?: string;
-  };
+  group: CompanyGroup;
   companies: Company[];
   followedCompanies: Company[];
   onBack: () => void;
@@ -48,7 +36,7 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
   const filteredCompanies = availableCompanies.filter(
     (company) =>
       company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.vatNumber.includes(searchTerm)
+      (company.vat || company.vat || '').includes(searchTerm)
   );
 
   const handleDeleteCompany = (companyId: string) => {
@@ -151,12 +139,12 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
                 </button>
               </div>
               <h3 className="font-semibold text-gray-900 mb-1">{company.name}</h3>
-              <p className="text-sm text-gray-600 mb-2">TVA: {company.vatNumber}</p>
+              <p className="text-sm text-gray-600 mb-2">TVA: {company.vat}</p>
               {company.sector && (
                 <p className="text-sm text-gray-500 mb-1">Secteur: {company.sector}</p>
               )}
-              {company.location && (
-                <p className="text-sm text-gray-500">Localisation: {company.location}</p>
+              {(company.city) && (
+                <p className="text-sm text-gray-500">Localisation: {company.city}</p>
               )}
               <div className="mt-4 pt-4 border-t border-gray-100">
                 <button
@@ -226,7 +214,7 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
                       />
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">{company.name}</div>
-                        <div className="text-sm text-gray-600">TVA: {company.vatNumber}</div>
+                        <div className="text-sm text-gray-600">TVA: {company.vat || company.vat}</div>
                         {company.sector && (
                           <div className="text-sm text-gray-500">{company.sector}</div>
                         )}

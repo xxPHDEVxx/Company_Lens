@@ -1,11 +1,49 @@
+import { useState, useEffect } from 'react';
+import { recentSearchApi } from '../../services/api';
+import type { RecentSearch } from '../../types/api';
+
 const RecentSearches = () => {
-  const recentSearches = [
-    { name: 'Delhaize Group', vat: 'BE 0402.206.045', time: 'Il y a 2 heures', color: 'from-blue-500 to-blue-600' },
-    { name: 'Proximus', vat: 'BE 0202.239.951', time: 'Il y a 5 heures', color: 'from-emerald-500 to-emerald-600' },
-    { name: 'KBC Bank', vat: 'BE 0462.920.226', time: 'Il y a 1 jour', color: 'from-purple-500 to-purple-600' },
-    { name: 'Solvay', vat: 'BE 0403.091.220', time: 'Il y a 2 jours', color: 'from-orange-500 to-orange-600' },
-    { name: 'AB InBev', vat: 'BE 0417.497.106', time: 'Il y a 3 jours', color: 'from-pink-500 to-pink-600' },
-  ];
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecentSearches = async () => {
+      try {
+        const data = await recentSearchApi.getAll();
+        setRecentSearches(data);
+      } catch (err) {
+        // Handle error silently
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecentSearches();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-800">Recherches récentes</h2>
+          <p className="text-sm text-gray-600 mt-1">Vos dernières analyses d'entreprises</p>
+        </div>
+        <div className="p-6">
+          <div className="animate-pulse space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center p-4 bg-gray-50 rounded-xl">
+                <div className="w-10 h-10 bg-gray-200 rounded-lg mr-4"></div>
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">

@@ -1,16 +1,93 @@
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { companyApi, authApi } from '../../services/api';
+import type { Company } from '../../types/api';
 
 const CompanyInfo = () => {
   const navigate = useNavigate();
+  const [company, setCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Mock company ID - replace with actual ID when backend is connected
-  const companyId = '123456789';
+  useEffect(() => {
+    const fetchUserAndCompany = async () => {
+      try {
+        setLoading(true);
+        
+        // First fetch the current user
+        const currentUser = await authApi.getCurrentUser();
+        
+        // Then fetch the user's company if they have one
+        if (currentUser.companyId) {
+          const companyData = await companyApi.getById(currentUser.companyId);
+          setCompany(companyData);
+        } else {
+          setError('Aucune entreprise associée à votre compte');
+        }
+      } catch (err) {
+        setError('Erreur lors du chargement des données');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserAndCompany();
+  }, []);
   
   const handleViewDetails = () => {
-    navigate(`/company/${companyId}`, {
-      state: { from: 'Tableau de bord', route: '/dashboard' }
-    });
+    if (company) {
+      navigate(`/company/${company.id}`, {
+        state: { from: 'Tableau de bord', route: '/dashboard' }
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="mb-8">
+        <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl p-8">
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/3 mb-8"></div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="h-16 bg-gray-200 rounded"></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="h-24 bg-gray-200 rounded"></div>
+                  <div className="h-24 bg-gray-200 rounded"></div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="h-16 bg-gray-200 rounded"></div>
+                <div className="h-32 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !company) {
+    return (
+      <div className="mb-8">
+        <div className="bg-gradient-to-br from-white to-red-50 rounded-2xl shadow-xl p-8">
+          <div className="text-center">
+            <div className="text-red-600 mb-4">
+              <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
+            <p className="text-gray-600">{error || 'Impossible de charger les données de l\'entreprise'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const latestFinancialData = company.financialData?.[company.financialData.length - 1];
+  const previousFinancialData = company.financialData?.[company.financialData.length - 2];
 
   return (
     <div className="mb-8">
@@ -29,15 +106,15 @@ const CompanyInfo = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">TechVision SA</h3>
-                  <p className="text-sm text-gray-600">BE 0123.456.789</p>
+                  <h3 className="text-lg font-semibold text-gray-900">{company.name}</h3>
+                  <p className="text-sm text-gray-600">{company.vat}</p>
                 </div>
               </div>
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <circle cx="10" cy="10" r="5" />
                 </svg>
-                Active
+                {company.status === 'active' ? 'Active' : 'Inactive'}
               </span>
             </div>
 
@@ -50,7 +127,7 @@ const CompanyInfo = () => {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">45</p>
+                    <p className="text-2xl font-bold text-gray-900">{company.employees || 0}</p>
                     <p className="text-xs text-gray-600">Employés</p>
                   </div>
                 </div>
@@ -64,7 +141,9 @@ const CompanyInfo = () => {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">€2.5M</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      €{latestFinancialData ? (latestFinancialData.revenue / 1000000).toFixed(1) : '0'}M
+                    </p>
                     <p className="text-xs text-gray-600">Chiffre d'affaires</p>
                   </div>
                 </div>
@@ -78,7 +157,7 @@ const CompanyInfo = () => {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">3</p>
+                    <p className="text-2xl font-bold text-gray-900">{company.establishments?.length || 0}</p>
                     <p className="text-xs text-gray-600">Établissements</p>
                   </div>
                 </div>
@@ -92,7 +171,9 @@ const CompanyInfo = () => {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-gray-900">€450K</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      €{latestFinancialData ? (latestFinancialData.profit / 1000).toFixed(0) : '0'}K
+                    </p>
                     <p className="text-xs text-gray-600">Bénéfice</p>
                   </div>
                 </div>
@@ -117,10 +198,20 @@ const CompanyInfo = () => {
                 <div>
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-600">Croissance annuelle</span>
-                    <span className="font-medium text-gray-900">75%</span>
+                    <span className="font-medium text-gray-900">
+                      {company.financialMetrics?.revenue.growth ? 
+                        `${company.financialMetrics.revenue.growth.toFixed(1)}%` : 
+                        '0%'
+                      }
+                    </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" style={{ width: '75%' }}></div>
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full" 
+                      style={{ 
+                        width: `${Math.min(100, Math.max(0, company.financialMetrics?.revenue.growth || 0))}%` 
+                      }}
+                    ></div>
                   </div>
                 </div>
                 <div>
@@ -140,12 +231,20 @@ const CompanyInfo = () => {
               <h5 className="font-medium text-gray-900 mb-3">Comparaison annuelle</h5>
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
-                  <p className="text-xs text-gray-600 mb-1">2024</p>
-                  <p className="text-xl font-bold text-blue-600">€2.5M</p>
+                  <p className="text-xs text-gray-600 mb-1">
+                    {latestFinancialData?.year || new Date().getFullYear()}
+                  </p>
+                  <p className="text-xl font-bold text-blue-600">
+                    €{latestFinancialData ? (latestFinancialData.revenue / 1000000).toFixed(2) : '0'}M
+                  </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-gray-600 mb-1">2023</p>
-                  <p className="text-xl font-bold text-gray-600">€2.17M</p>
+                  <p className="text-xs text-gray-600 mb-1">
+                    {previousFinancialData?.year || new Date().getFullYear() - 1}
+                  </p>
+                  <p className="text-xl font-bold text-gray-600">
+                    €{previousFinancialData ? (previousFinancialData.revenue / 1000000).toFixed(2) : '0'}M
+                  </p>
                 </div>
               </div>
             </div>

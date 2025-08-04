@@ -1,90 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardSidebar from '../components/dashboard/DashboardSidebar';
 import { useSidebar } from '../contexts/SidebarContext';
 import { GroupForm, GroupList, groupIcons, getGroupIcon } from '../components/groupes';
+import { groupApi } from '../services/api';
+import type { CompanyGroup } from '../types/api';
 
-interface CompanyGroup {
-  id: string;
-  name: string;
-  description: string;
-  companiesCount: number;
-  createdAt: string;
-  icon?: string;
-}
-
-
-// Mock data for company groups
-const mockGroups: CompanyGroup[] = [
-  {
-    id: '1',
-    name: 'Concurrents principaux',
-    description: 'Entreprises concurrentes directes dans notre secteur d\'activité',
-    companiesCount: 12,
-    createdAt: '2024-01-15',
-    icon: 'competitive',
-  },
-  {
-    id: '2',
-    name: 'Partenaires stratégiques',
-    description: 'Entreprises partenaires pour des collaborations et projets communs',
-    companiesCount: 8,
-    createdAt: '2024-02-03',
-    icon: 'partnership',
-  },
-  {
-    id: '3',
-    name: 'Fournisseurs clés',
-    description: 'Principaux fournisseurs et prestataires de services',
-    companiesCount: 15,
-    createdAt: '2024-02-20',
-    icon: 'supplier',
-  },
-  {
-    id: '4',
-    name: 'Clients potentiels',
-    description: 'Entreprises identifiées comme prospects pour nos services',
-    companiesCount: 24,
-    createdAt: '2024-03-01',
-    icon: 'client',
-  },
-];
 
 
 const GroupesContent: React.FC = () => {
   const { isCollapsed } = useSidebar();
-  const [groups, setGroups] = useState<CompanyGroup[]>(mockGroups);
+  const [groups, setGroups] = useState<CompanyGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingGroup, setEditingGroup] = useState<CompanyGroup | null>(null);
 
-  const handleSubmitGroup = (formData: { name: string; description: string; icon: string }) => {
-    if (!formData.name.trim()) return;
+  useEffect(() => {
+    fetchGroups();
+  }, []);
 
-    if (formMode === 'create') {
-      const group: CompanyGroup = {
-        id: Date.now().toString(),
-        name: formData.name,
-        description: formData.description,
-        companiesCount: 0,
-        createdAt: new Date().toISOString().split('T')[0],
-        icon: formData.icon,
-      };
-      setGroups(prev => [...prev, group]);
-    } else if (formMode === 'edit' && editingGroup) {
-      setGroups(prev => prev.map(group => 
-        group.id === editingGroup.id 
-          ? { ...group, name: formData.name, description: formData.description, icon: formData.icon }
-          : group
-      ));
+  const fetchGroups = async () => {
+    try {
+      setLoading(true);
+      const data = await groupApi.getAll();
+      setGroups(data);
+    } catch (err) {
+      setError('Erreur lors du chargement des groupes');
+    } finally {
+      setLoading(false);
     }
-
-    setShowGroupForm(false);
-    setEditingGroup(null);
   };
 
-  const handleDeleteGroup = (groupId: string) => {
+  const handleSubmitGroup = async (formData: { name: string; description: string; icon: string }) => {
+    if (!formData.name.trim()) return;
+
+    try {
+      if (formMode === 'create') {
+        const newGroup = await groupApi.create({
+          name: formData.name,
+          description: formData.description,
+          icon: formData.icon,
+        });
+        setGroups(prev => [...prev, newGroup]);
+      } else if (formMode === 'edit' && editingGroup) {
+        const updatedGroup = await groupApi.update(editingGroup.id, {
+          name: formData.name,
+          description: formData.description,
+          icon: formData.icon,
+        });
+        setGroups(prev => prev.map(group => 
+          group.id === editingGroup.id ? updatedGroup : group
+        ));
+      }
+      setShowGroupForm(false);
+      setEditingGroup(null);
+    } catch (err) {
+      alert('Erreur lors de la sauvegarde du groupe');
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce groupe ?')) {
-      setGroups(prev => prev.filter(group => group.id !== groupId));
+      try {
+        await groupApi.delete(groupId);
+        setGroups(prev => prev.filter(group => group.id !== groupId));
+      } catch (err) {
+        alert('Erreur lors de la suppression du groupe');
+      }
     }
   };
 
@@ -159,14 +142,41 @@ const GroupesContent: React.FC = () => {
             />
           )}
 
+          {/* Loading State */}
+          {loading && (
+            <div className="bg-white rounded-xl shadow-lg p-12">
+              <div className="flex flex-col items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+                <p className="text-gray-600">Chargement des groupes...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && !loading && (
+            <div className="bg-white rounded-xl shadow-lg p-12">
+              <div className="text-center">
+                <div className="text-red-600 mb-4">
+                  <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
+                <p className="text-gray-600">{error}</p>
+              </div>
+            </div>
+          )}
+
           {/* Groups Grid */}
-          <GroupList
-            groups={groups}
-            onDeleteGroup={handleDeleteGroup}
-            onEditGroup={handleEditGroup}
-            onShowNewGroupForm={handleCreateNew}
-            getGroupIcon={getGroupIcon}
-          />
+          {!loading && !error && (
+            <GroupList
+              groups={groups}
+              onDeleteGroup={handleDeleteGroup}
+              onEditGroup={handleEditGroup}
+              onShowNewGroupForm={handleCreateNew}
+              getGroupIcon={getGroupIcon}
+            />
+          )}
         </div>
       </div>
     </div>

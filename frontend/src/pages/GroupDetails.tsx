@@ -1,135 +1,142 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardSidebar from '../components/dashboard/DashboardSidebar';
 import { useSidebar } from '../contexts/SidebarContext';
 import { GroupCompaniesView, getGroupIcon } from '../components/groupes';
+import { groupApi, companyApi } from '../services/api';
+import type { Company, CompanyGroup } from '../types/api';
 
-interface CompanyGroup {
-  id: string;
-  name: string;
-  description: string;
-  companiesCount: number;
-  createdAt: string;
-  icon?: string;
-}
-
-interface Company {
-  id: string;
-  name: string;
-  vatNumber: string;
-  sector?: string;
-  location?: string;
-}
-
-// Mock data for company groups (in a real app, this would come from an API)
-const mockGroups: CompanyGroup[] = [
-  {
-    id: '1',
-    name: 'Concurrents principaux',
-    description: 'Entreprises concurrentes directes dans notre secteur d\'activité',
-    companiesCount: 12,
-    createdAt: '2024-01-15',
-    icon: 'competitive',
-  },
-  {
-    id: '2',
-    name: 'Partenaires stratégiques',
-    description: 'Entreprises partenaires pour des collaborations et projets communs',
-    companiesCount: 8,
-    createdAt: '2024-02-03',
-    icon: 'partnership',
-  },
-  {
-    id: '3',
-    name: 'Fournisseurs clés',
-    description: 'Principaux fournisseurs et prestataires de services',
-    companiesCount: 15,
-    createdAt: '2024-02-20',
-    icon: 'supplier',
-  },
-  {
-    id: '4',
-    name: 'Clients potentiels',
-    description: 'Entreprises identifiées comme prospects pour nos services',
-    companiesCount: 24,
-    createdAt: '2024-03-01',
-    icon: 'client',
-  },
-];
-
-// Mock data for companies (in a real app, this would come from an API)
-const mockCompanies: Company[] = [
-  { id: '1', name: 'TechCorp SA', vatNumber: 'BE0123456789', sector: 'Technologie', location: 'Bruxelles' },
-  { id: '2', name: 'InnovateBE SPRL', vatNumber: 'BE0234567890', sector: 'Conseil', location: 'Liège' },
-  { id: '3', name: 'GreenEnergy NV', vatNumber: 'BE0345678901', sector: 'Énergie', location: 'Anvers' },
-  { id: '4', name: 'FinanceHub SA', vatNumber: 'BE0456789012', sector: 'Finance', location: 'Gand' },
-  { id: '5', name: 'LogisTech BVBA', vatNumber: 'BE0567890123', sector: 'Logistique', location: 'Charleroi' },
-  { id: '6', name: 'DataInsight SRL', vatNumber: 'BE0678901234', sector: 'Analyse de données', location: 'Namur' },
-  { id: '7', name: 'CloudServices SA', vatNumber: 'BE0789012345', sector: 'Cloud Computing', location: 'Bruxelles' },
-  { id: '8', name: 'SecureIT SPRL', vatNumber: 'BE0890123456', sector: 'Cybersécurité', location: 'Louvain' },
-];
-
-// Mock data for group-company relationships
-const mockGroupCompanies: Record<string, string[]> = {
-  '1': ['1', '2', '7'], // Concurrents principaux
-  '2': ['3', '4'], // Partenaires stratégiques
-  '3': ['5', '6', '8'], // Fournisseurs clés
-  '4': [], // Clients potentiels (empty)
-};
 
 const GroupDetailsContent: React.FC = () => {
   const { isCollapsed } = useSidebar();
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
-  const [groupCompanies, setGroupCompanies] = useState<Record<string, string[]>>(mockGroupCompanies);
-  const [followedCompanies] = useState<Company[]>(mockCompanies);
-  const [groups, setGroups] = useState<CompanyGroup[]>(mockGroups);
+  const [currentGroup, setCurrentGroup] = useState<CompanyGroup | null>(null);
+  const [groupCompanies, setGroupCompanies] = useState<Company[]>([]);
+  const [followedCompanies, setFollowedCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Find the current group
-  const currentGroup = groups.find(g => g.id === groupId);
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!groupId) {
+        navigate('/groupes');
+        return;
+      }
 
-  // If group not found, redirect to groups page
-  if (!currentGroup) {
-    navigate('/groupes');
-    return null;
-  }
+      try {
+        setLoading(true);
+        // Fetch group details
+        const group = await groupApi.getById(groupId);
+        setCurrentGroup(group);
 
-  const handleDeleteCompanyFromGroup = (groupId: string, companyId: string) => {
-    setGroupCompanies(prev => ({
-      ...prev,
-      [groupId]: prev[groupId].filter(id => id !== companyId)
-    }));
-    
-    // Update company count in the group
-    setGroups(prev => prev.map(group => 
-      group.id === groupId 
-        ? { ...group, companiesCount: (groupCompanies[groupId]?.length || 1) - 1 }
-        : group
-    ));
+        // Fetch companies in this group
+        const companiesInGroup = await groupApi.getCompanies(groupId);
+        setGroupCompanies(companiesInGroup);
+
+        // Fetch all followed companies (for adding to group)
+        const allFollowed = await companyApi.getFollowed();
+        setFollowedCompanies(allFollowed);
+      } catch (err) {
+        setError('Erreur lors du chargement des données');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [groupId, navigate]);
+
+  const handleDeleteCompanyFromGroup = async (groupId: string, companyId: string) => {
+    try {
+      await groupApi.removeCompany(groupId, companyId);
+      setGroupCompanies(prev => prev.filter(company => company.id !== companyId));
+      if (currentGroup) {
+        setCurrentGroup({
+          ...currentGroup,
+          companiesCount: Math.max(0, currentGroup.companiesCount - 1)
+        });
+      }
+    } catch (err) {
+      alert('Erreur lors de la suppression de l\'entreprise du groupe');
+    }
   };
 
-  const handleAddCompaniesToGroup = (groupId: string, companyIds: string[]) => {
-    setGroupCompanies(prev => ({
-      ...prev,
-      [groupId]: [...(prev[groupId] || []), ...companyIds]
-    }));
-    
-    // Update company count in the group
-    setGroups(prev => prev.map(group => 
-      group.id === groupId 
-        ? { ...group, companiesCount: (groupCompanies[groupId]?.length || 0) + companyIds.length }
-        : group
-    ));
-  };
-
-  const getCompaniesForGroup = (groupId: string): Company[] => {
-    const companyIds = groupCompanies[groupId] || [];
-    return followedCompanies.filter(company => companyIds.includes(company.id));
+  const handleAddCompaniesToGroup = async (groupId: string, companyIds: string[]) => {
+    try {
+      await groupApi.addCompanies(groupId, companyIds);
+      // Refresh the companies in group
+      const updatedCompanies = await groupApi.getCompanies(groupId);
+      setGroupCompanies(updatedCompanies);
+      if (currentGroup) {
+        setCurrentGroup({
+          ...currentGroup,
+          companiesCount: updatedCompanies.length
+        });
+      }
+    } catch (err) {
+      alert('Erreur lors de l\'ajout des entreprises au groupe');
+    }
   };
 
   const handleBack = () => {
     navigate('/groupes');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="hidden md:block">
+          <DashboardSidebar />
+        </div>
+        <div className={`transition-all duration-300 ${
+          isCollapsed ? 'md:ml-28' : 'md:ml-64'
+        }`}>
+          <div className="px-6 md:px-8 lg:px-12 pt-20 pb-8 max-w-6xl mx-auto">
+            <div className="bg-white rounded-xl shadow-lg p-12">
+              <div className="flex flex-col items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
+                <p className="text-gray-600">Chargement du groupe...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !currentGroup) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="hidden md:block">
+          <DashboardSidebar />
+        </div>
+        <div className={`transition-all duration-300 ${
+          isCollapsed ? 'md:ml-28' : 'md:ml-64'
+        }`}>
+          <div className="px-6 md:px-8 lg:px-12 pt-20 pb-8 max-w-6xl mx-auto">
+            <div className="bg-white rounded-xl shadow-lg p-12">
+              <div className="text-center">
+                <div className="text-red-600 mb-4">
+                  <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
+                <p className="text-gray-600">{error || 'Groupe introuvable'}</p>
+                <button
+                  onClick={() => navigate('/groupes')}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Retour aux groupes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
@@ -145,7 +152,7 @@ const GroupDetailsContent: React.FC = () => {
         <div className="px-6 md:px-8 lg:px-12 pt-20 pb-8 max-w-6xl mx-auto">
           <GroupCompaniesView
             group={currentGroup}
-            companies={getCompaniesForGroup(currentGroup.id)}
+            companies={groupCompanies}
             followedCompanies={followedCompanies}
             onBack={handleBack}
             onDeleteCompany={handleDeleteCompanyFromGroup}

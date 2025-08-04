@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import DashboardSidebar from '../components/dashboard/DashboardSidebar';
 import { useSidebar } from '../contexts/SidebarContext';
 import { SearchForm, SearchResults, RecentSearches } from '../components/recherche';
+import { companyApi, recentSearchApi } from '../services/api';
+import type { Company } from '../types/api';
 
 interface SearchFilters {
   vatNumber: string;
@@ -19,6 +21,8 @@ const RechercheContent: React.FC = () => {
     region: '',
   });
   const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Company[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const handleFilterChange = (key: keyof SearchFilters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -31,11 +35,26 @@ const RechercheContent: React.FC = () => {
     }
 
     setIsSearching(true);
-    // Simulate search delay
-    setTimeout(() => {
+    setHasSearched(true);
+    
+    try {
+      const results = await companyApi.search(filters);
+      setSearchResults(results);
+      
+      // Add to recent searches if we have results
+      if (results.length > 0) {
+        const firstResult = results[0];
+        await recentSearchApi.add({
+          name: firstResult.name,
+          vat: firstResult.vat
+        });
+      }
+    } catch (error) {
+      // Handle search error
+      alert('Erreur lors de la recherche d\'entreprises');
+    } finally {
       setIsSearching(false);
-      // Here would be the actual search implementation
-    }, 2000);
+    }
   };
 
 
@@ -79,7 +98,12 @@ const RechercheContent: React.FC = () => {
           </div>
 
           {/* Search Results */}
-          <SearchResults isSearching={isSearching} />
+          {hasSearched && (
+            <SearchResults 
+              isSearching={isSearching} 
+              searchResults={searchResults}
+            />
+          )}
         </div>
       </div>
     </div>

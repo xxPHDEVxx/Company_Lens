@@ -3,7 +3,7 @@ import { MapPin, Phone, Mail, Globe } from 'lucide-react';
 
 interface ContactInfoProps {
   contact: {
-    Address: {
+    address: {
       street: string;
       streetNumber: string;
       city: string;
@@ -30,11 +30,11 @@ const ContactInfo: React.FC<ContactInfoProps> = ({ contact }) => {
               <div className="flex items-start">
                 <MapPin className="w-5 h-5 text-gray-400 mt-0.5 mr-3" />
                 <div>
-                  <p className="text-sm text-gray-600">{contact.Address.street} {contact.Address.streetNumber}</p>
+                  <p className="text-sm text-gray-600">{contact.address.street} {contact.address.streetNumber}</p>
                   <p className="text-sm text-gray-600">
-                    {contact.Address.postalCode} {contact.Address.city}
+                    {contact.address.postalCode} {contact.address.city}
                   </p>
-                  <p className="text-sm text-gray-600">{contact.Address.country}</p>
+                  <p className="text-sm text-gray-600">{contact.address.country}</p>
                 </div>
               </div>
             </div>
