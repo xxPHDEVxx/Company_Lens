@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface FollowedCompany {
   id: string;
@@ -30,6 +31,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   getRegionBadge,
   formatDate,
 }) => {
+  const navigate = useNavigate();
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">
       {/* Header */}
@@ -95,15 +97,21 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button className="flex-1 px-3 py-2 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium">
+        <button 
+          onClick={() => navigate(`/company/${company.id}`, { state: { from: 'Suivi', route: '/suivi' } })}
+          className="flex-1 px-3 py-2 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors duration-200 text-sm font-medium">
           Voir détails
         </button>
         {company.website && (
-          <button className="px-3 py-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
+          <a 
+            href={company.website} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center px-3 py-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
-          </button>
+          </a>
         )}
       </div>
     </div>

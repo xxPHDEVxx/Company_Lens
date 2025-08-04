@@ -8,6 +8,7 @@ import Groupes from './pages/Groupes';
 import GroupDetails from './pages/GroupDetails';
 import Suivi from './pages/Suivi';
 import Historique from './pages/Historique';
+import CompanyDetails from './pages/CompanyDetails';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { SidebarProvider } from './contexts/SidebarContext';
 
@@ -18,7 +19,8 @@ function AppContent() {
                            location.pathname === '/groupes' || 
                            location.pathname.startsWith('/groupes/') ||
                            location.pathname === '/suivi' ||
-                           location.pathname === '/historique';
+                           location.pathname === '/historique' ||
+                           location.pathname.startsWith('/company/');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -46,6 +48,7 @@ function AppContent() {
         <Route path="/groupes/:groupId" element={<GroupDetails />} />
         <Route path="/suivi" element={<Suivi />} />
         <Route path="/historique" element={<Historique />} />
+        <Route path="/company/:companyId" element={<CompanyDetails />} />
       </Routes>
     </div>
   );
