@@ -41,7 +41,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
 
       {/* VAT and Status */}
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm text-gray-600 font-mono">{company.vatNumber || company.vat}</span>
+        <span className="text-sm text-gray-600 font-mono">{company.vat}</span>
         {getStatusBadge(company.status)}
       </div>
 
