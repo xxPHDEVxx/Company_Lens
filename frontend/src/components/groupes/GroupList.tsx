@@ -13,6 +13,7 @@ interface CompanyGroup {
 interface GroupListProps {
   groups: CompanyGroup[];
   onDeleteGroup: (groupId: string) => void;
+  onEditGroup: (group: CompanyGroup) => void;
   onShowNewGroupForm: () => void;
   getGroupIcon: (iconKey?: string) => React.ReactNode;
 }
@@ -20,6 +21,7 @@ interface GroupListProps {
 const GroupList: React.FC<GroupListProps> = ({
   groups,
   onDeleteGroup,
+  onEditGroup,
   onShowNewGroupForm,
   getGroupIcon,
 }) => {
@@ -50,6 +52,7 @@ const GroupList: React.FC<GroupListProps> = ({
           key={group.id}
           group={group}
           onDelete={onDeleteGroup}
+          onEdit={onEditGroup}
           getGroupIcon={getGroupIcon}
         />
       ))}

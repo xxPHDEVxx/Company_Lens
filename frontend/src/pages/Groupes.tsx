@@ -52,34 +52,51 @@ const mockGroups: CompanyGroup[] = [
 const GroupesContent: React.FC = () => {
   const { isCollapsed } = useSidebar();
   const [groups, setGroups] = useState<CompanyGroup[]>(mockGroups);
-  const [showNewGroupForm, setShowNewGroupForm] = useState(false);
-  const [newGroup, setNewGroup] = useState({
-    name: '',
-    description: '',
-    icon: 'default',
-  });
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [editingGroup, setEditingGroup] = useState<CompanyGroup | null>(null);
 
-  const handleCreateGroup = () => {
-    if (!newGroup.name.trim()) return;
+  const handleSubmitGroup = (formData: { name: string; description: string; icon: string }) => {
+    if (!formData.name.trim()) return;
 
-    const group: CompanyGroup = {
-      id: Date.now().toString(),
-      name: newGroup.name,
-      description: newGroup.description,
-      companiesCount: 0,
-      createdAt: new Date().toISOString().split('T')[0],
-      icon: newGroup.icon,
-    };
+    if (formMode === 'create') {
+      const group: CompanyGroup = {
+        id: Date.now().toString(),
+        name: formData.name,
+        description: formData.description,
+        companiesCount: 0,
+        createdAt: new Date().toISOString().split('T')[0],
+        icon: formData.icon,
+      };
+      setGroups(prev => [...prev, group]);
+    } else if (formMode === 'edit' && editingGroup) {
+      setGroups(prev => prev.map(group => 
+        group.id === editingGroup.id 
+          ? { ...group, name: formData.name, description: formData.description, icon: formData.icon }
+          : group
+      ));
+    }
 
-    setGroups(prev => [...prev, group]);
-    setNewGroup({ name: '', description: '', icon: 'default' });
-    setShowNewGroupForm(false);
+    setShowGroupForm(false);
+    setEditingGroup(null);
   };
 
   const handleDeleteGroup = (groupId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce groupe ?')) {
       setGroups(prev => prev.filter(group => group.id !== groupId));
     }
+  };
+
+  const handleEditGroup = (group: CompanyGroup) => {
+    setEditingGroup(group);
+    setFormMode('edit');
+    setShowGroupForm(true);
+  };
+
+  const handleCreateNew = () => {
+    setEditingGroup(null);
+    setFormMode('create');
+    setShowGroupForm(true);
   };
 
 
@@ -112,7 +129,7 @@ const GroupesContent: React.FC = () => {
           {/* New Group Button */}
           <div className="mb-6 flex justify-end">
             <button
-              onClick={() => setShowNewGroupForm(true)}
+              onClick={handleCreateNew}
               className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md font-medium"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,13 +139,20 @@ const GroupesContent: React.FC = () => {
             </button>
           </div>
 
-          {/* New Group Form */}
-          {showNewGroupForm && (
+          {/* Group Form */}
+          {showGroupForm && (
             <GroupForm
-              newGroup={newGroup}
-              setNewGroup={setNewGroup}
-              onSubmit={handleCreateGroup}
-              onCancel={() => setShowNewGroupForm(false)}
+              mode={formMode}
+              initialData={editingGroup ? {
+                name: editingGroup.name,
+                description: editingGroup.description,
+                icon: editingGroup.icon || 'default',
+              } : undefined}
+              onSubmit={handleSubmitGroup}
+              onCancel={() => {
+                setShowGroupForm(false);
+                setEditingGroup(null);
+              }}
               getGroupIcon={getGroupIcon}
               groupIcons={groupIcons}
             />
@@ -138,7 +162,8 @@ const GroupesContent: React.FC = () => {
           <GroupList
             groups={groups}
             onDeleteGroup={handleDeleteGroup}
-            onShowNewGroupForm={() => setShowNewGroupForm(true)}
+            onEditGroup={handleEditGroup}
+            onShowNewGroupForm={handleCreateNew}
             getGroupIcon={getGroupIcon}
           />
         </div>

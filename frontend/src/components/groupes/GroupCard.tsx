@@ -12,10 +12,11 @@ interface CompanyGroup {
 interface GroupCardProps {
   group: CompanyGroup;
   onDelete: (groupId: string) => void;
+  onEdit: (group: CompanyGroup) => void;
   getGroupIcon: (iconKey?: string) => React.ReactNode;
 }
 
-const GroupCard: React.FC<GroupCardProps> = ({ group, onDelete, getGroupIcon }) => {
+const GroupCard: React.FC<GroupCardProps> = ({ group, onDelete, onEdit, getGroupIcon }) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-BE', {
       day: 'numeric',
@@ -37,7 +38,11 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, onDelete, getGroupIcon }) 
           </h3>
         </div>
         <div className="flex gap-1">
-          <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200">
+          <button 
+            onClick={() => onEdit(group)}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+            title="Modifier le groupe"
+          >
             <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
