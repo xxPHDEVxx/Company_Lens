@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import DashboardSidebar from '../components/dashboard/DashboardSidebar';
 import { useSidebar } from '../contexts/SidebarContext';
-import { SearchForm, SearchResults } from '../components/recherche';
+import { SearchForm, SearchResults, RecentSearches } from '../components/recherche';
 
 interface SearchFilters {
   vatNumber: string;
@@ -73,6 +73,11 @@ const RechercheContent: React.FC = () => {
             onSearch={handleSearch}
             isSearching={isSearching}
           />
+
+          {/* Recent Searches */}
+          <div className="mt-8 mb-8">
+            <RecentSearches />
+          </div>
 
           {/* Search Results */}
           <SearchResults isSearching={isSearching} />

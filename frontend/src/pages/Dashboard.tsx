@@ -1,7 +1,6 @@
 import DashboardSidebar from '../components/dashboard/DashboardSidebar';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
 import CompanyInfo from '../components/dashboard/CompanyInfo';
-import RecentSearches from '../components/dashboard/RecentSearches';
 import { useSidebar } from '../contexts/SidebarContext';
 
 const DashboardContent = () => {
@@ -24,9 +23,6 @@ const DashboardContent = () => {
 
           {/* Company Information */}
           <CompanyInfo />
-
-          {/* Recent Searches */}
-          <RecentSearches />
         </div>
       </div>
     </div>
