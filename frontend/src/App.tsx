@@ -12,6 +12,7 @@ import CompanyDetails from './pages/CompanyDetails';
 import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { SidebarProvider } from './contexts/SidebarContext';
+import { LogoutProvider } from './contexts/LogoutContext';
 
 function AppContent() {
   const location = useLocation();
@@ -87,7 +88,9 @@ function App() {
   return (
     <Router>
       <SidebarProvider>
-        <AppContent />
+        <LogoutProvider>
+          <AppContent />
+        </LogoutProvider>
       </SidebarProvider>
     </Router>
   );

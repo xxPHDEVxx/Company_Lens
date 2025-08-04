@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSidebar } from '../../contexts/SidebarContext';
-import { authApi } from '../../services/api';
+import { useLogout } from '../../contexts/LogoutContext';
 
 const DashboardSidebar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { isCollapsed, setIsCollapsed } = useSidebar();
+  const { showLogoutModal } = useLogout();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -110,15 +111,9 @@ const DashboardSidebar = () => {
     navigate(route);
   };
   
-  const handleLogout = async () => {
-    try {
-      await authApi.logout();
-      navigate('/login');
-    } catch (error) {
-      // Even if logout fails, clear token and redirect
-      localStorage.removeItem('authToken');
-      navigate('/login');
-    }
+  const handleLogout = () => {
+    setIsDropdownOpen(false);
+    showLogoutModal();
   };
 
   return (
@@ -348,7 +343,6 @@ const DashboardSidebar = () => {
           )}
         </div>
       </div>
-
     </div>
   );
 };
