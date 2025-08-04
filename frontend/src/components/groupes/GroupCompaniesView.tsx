@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Trash2, Plus, Building2, ArrowLeft, Eye } from 'lucide-react';
+import { X, Trash2, Plus, Building2, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Company, CompanyGroup } from '../../types/api';
 
@@ -17,10 +17,8 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
   group,
   companies,
   followedCompanies,
-  onBack,
   onDeleteCompany,
   onAddCompanies,
-  getGroupIcon,
 }) => {
   const navigate = useNavigate();
   const [showAddModal, setShowAddModal] = useState(false);
@@ -74,27 +72,6 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-600 to-violet-600 p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <button
-              onClick={onBack}
-              className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-white" />
-            </button>
-            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-              {getGroupIcon(group.icon)}
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-white">{group.name}</h2>
-              <p className="text-purple-100 text-sm">{group.description}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Actions Bar */}
       <div className="flex justify-between items-center">
         <div className="text-gray-600">

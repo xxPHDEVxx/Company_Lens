@@ -30,7 +30,12 @@ const GroupCard: React.FC<GroupCardProps> = ({ group, onDelete, onEdit, onViewCo
   };
   
   const handleViewCompanies = () => {
-    navigate(`/groupes/${group.id}`);
+    navigate(`/groupes/${group.id}`, {
+      state: { 
+        from: 'Groupes',
+        route: '/groupes'
+      }
+    });
   };
 
   return (
