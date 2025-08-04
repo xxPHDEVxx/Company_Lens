@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import DashboardSidebar from '../components/dashboard/DashboardSidebar';
-import { useSidebar } from '../contexts/SidebarContext';
+import MainContentLayout from '../components/layout/MainContentLayout';
 import { GroupForm, GroupList, groupIcons, getGroupIcon } from '../components/groupes';
 import { groupApi } from '../services/api';
 import type { CompanyGroup } from '../types/api';
@@ -8,7 +7,6 @@ import type { CompanyGroup } from '../types/api';
 
 
 const GroupesContent: React.FC = () => {
-  const { isCollapsed } = useSidebar();
   const [groups, setGroups] = useState<CompanyGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,17 +83,7 @@ const GroupesContent: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      {/* Sidebar Container */}
-      <div className="hidden md:block">
-        <DashboardSidebar />
-      </div>
-
-      {/* Main Content Container - Fixed centered layout with equal spacing */}
-      <div className={`transition-all duration-300 ${
-        isCollapsed ? 'md:ml-28' : 'md:ml-64'
-      }`}>
-        <div className="px-6 md:px-8 lg:px-12 pt-20 pb-8 max-w-6xl mx-auto">
+    <MainContentLayout>
           {/* Header */}
           <div className="mb-8">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -177,9 +165,7 @@ const GroupesContent: React.FC = () => {
               getGroupIcon={getGroupIcon}
             />
           )}
-        </div>
-      </div>
-    </div>
+    </MainContentLayout>
   );
 };
 

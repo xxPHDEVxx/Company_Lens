@@ -1,31 +1,16 @@
-import DashboardSidebar from '../components/dashboard/DashboardSidebar';
+import MainContentLayout from '../components/layout/MainContentLayout';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
 import CompanyInfo from '../components/dashboard/CompanyInfo';
-import { useSidebar } from '../contexts/SidebarContext';
 
 const DashboardContent = () => {
-  const { isCollapsed } = useSidebar();
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 mx-auto">
-      {/* Sidebar Container */}
-      <div className="hidden md:block">
-        <DashboardSidebar />
-      </div>
+    <MainContentLayout>
+      {/* Welcome Section */}
+      <WelcomeSection />
 
-      {/* Main Content Container - Fixed centered layout with equal spacing */}
-      <div className={`transition-all duration-300 ${
-        isCollapsed ? 'md:ml-28' : 'md:ml-64'
-      }`}>
-        <div className="px-6 md:px-8 lg:px-12 pt-20 pb-8 max-w-6xl mx-auto">
-          {/* Welcome Section */}
-          <WelcomeSection />
-
-          {/* Company Information */}
-          <CompanyInfo />
-        </div>
-      </div>
-    </div>
+      {/* Company Information */}
+      <CompanyInfo />
+    </MainContentLayout>
   );
 };
 
