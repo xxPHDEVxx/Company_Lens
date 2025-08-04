@@ -37,7 +37,7 @@ const Login = () => {
     
     // Simulate API call
     setTimeout(() => {
-      console.log('Login attempt:', { email, password, rememberMe });
+      // Login logic would go here
       setIsLoading(false);
     }, 1500);
   };

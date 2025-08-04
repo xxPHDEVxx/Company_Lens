@@ -35,7 +35,6 @@ const RechercheContent: React.FC = () => {
     setTimeout(() => {
       setIsSearching(false);
       // Here would be the actual search implementation
-      console.log('Recherche avec filtres:', filters);
     }, 2000);
   };
 

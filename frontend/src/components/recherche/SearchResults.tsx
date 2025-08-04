@@ -5,6 +5,8 @@ interface SearchResultsProps {
 }
 
 const SearchResults: React.FC<SearchResultsProps> = ({ isSearching }) => {
+  // Navigation would be handled when actual search results are implemented
+  
   if (!isSearching) return null;
 
   return (

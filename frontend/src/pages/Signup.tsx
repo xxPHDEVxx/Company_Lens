@@ -55,7 +55,7 @@ const Signup = () => {
     
     // Simulate API call
     setTimeout(() => {
-      console.log('Signup attempt:', { email, password, acceptTerms });
+      // Signup logic would go here
       setIsLoading(false);
     }, 1500);
   };

@@ -24,7 +24,7 @@ const GroupList: React.FC<GroupListProps> = ({
   onEditGroup,
   onShowNewGroupForm,
   getGroupIcon,
-}) => {
+}) =>{
   if (groups.length === 0) {
     return (
       <div className="text-center py-12">
@@ -53,7 +53,9 @@ const GroupList: React.FC<GroupListProps> = ({
           group={group}
           onDelete={onDeleteGroup}
           onEdit={onEditGroup}
-          onViewCompanies={() => {}}
+          onViewCompanies={() => {
+            // Navigation handled in GroupCard component
+          }}
           getGroupIcon={getGroupIcon}
         />
       ))}
