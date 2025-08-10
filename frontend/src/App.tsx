@@ -16,17 +16,17 @@ import { LogoutProvider } from './contexts/LogoutContext';
 
 function AppContent() {
   const location = useLocation();
-  const isDashboardRoute = location.pathname.startsWith('/dashboard') || 
-                           location.pathname === '/recherche' || 
-                           location.pathname === '/groupes' || 
-                           location.pathname.startsWith('/groupes/') ||
-                           location.pathname === '/suivi' ||
-                           location.pathname === '/historique' ||
-                           location.pathname.startsWith('/company/');
+  const isDashboardRoute = [
+    '/dashboard',
+    '/recherche',
+    '/groupes',
+    '/suivi',
+    '/historique'
+  ].some(route => location.pathname.startsWith(route)) ||
+  location.pathname.startsWith('/company/');
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Show Navbar only when NOT on dashboard routes */}
       {!isDashboardRoute && <Navbar />}
       <Routes>
         <Route path="/" element={

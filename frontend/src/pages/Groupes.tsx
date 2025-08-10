@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import MainContentLayout from '../components/layout/MainContentLayout';
-import { GroupForm, GroupList, groupIcons, getGroupIcon } from '../components/groupes';
+import { GroupForm, GroupList, getGroupIcon } from '../components/groupes';
 import { groupApi } from '../services/api';
 import type { CompanyGroup } from '../types/api';
 
-
-
-const GroupesContent: React.FC = () => {
+const GroupesContent = () => {
   const [groups, setGroups] = useState<CompanyGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
