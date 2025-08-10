@@ -1,47 +1,33 @@
+import { Icons } from '../../utils/icons';
+
 const stats = [
   {
     id: 1,
     name: 'Entreprises analysées',
     value: '250K+',
     description: 'Entreprises belges dans notre base de données',
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-      </svg>
-    ),
+    icon: <Icons.building className="h-6 w-6" />,
   },
   {
     id: 2,
     name: 'Rapports générés',
     value: '500K+',
     description: 'Rapports détaillés créés pour nos utilisateurs',
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-    ),
+    icon: <Icons.document className="h-6 w-6" />,
   },
   {
     id: 3,
     name: 'Utilisateurs actifs',
     value: '15K+',
     description: 'Professionnels qui nous font confiance',
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-      </svg>
-    ),
+    icon: <Icons.users className="h-6 w-6" />,
   },
   {
     id: 4,
     name: 'Précision des données',
     value: '99.9%',
     description: 'Fiabilité de nos informations',
-    icon: (
-      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
+    icon: <Icons.checkCircleOutline className="h-6 w-6" />,
   },
 ];
 
@@ -124,9 +110,7 @@ const StatsSection = () => (
           <div className="text-center">
             <div className="flex justify-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                <svg className="h-8 w-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
+                <Icons.shield className="h-8 w-8 text-green-600" />
               </div>
             </div>
             <h3 className="mt-4 text-lg font-semibold text-gray-900">Conformité RGPD</h3>
@@ -138,9 +122,7 @@ const StatsSection = () => (
           <div className="text-center">
             <div className="flex justify-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+                <Icons.lightning className="h-8 w-8 text-blue-600" />
               </div>
             </div>
             <h3 className="mt-4 text-lg font-semibold text-gray-900">Mise à jour en temps réel</h3>
@@ -152,9 +134,7 @@ const StatsSection = () => (
           <div className="text-center">
             <div className="flex justify-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
-                <svg className="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.25a9.75 9.75 0 100 19.5 9.75 9.75 0 000-19.5z" />
-                </svg>
+                <Icons.support className="h-8 w-8 text-purple-600" />
               </div>
             </div>
             <h3 className="mt-4 text-lg font-semibold text-gray-900">Support expert</h3>

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { Icons } from '../../utils/icons';
 
 const HeroSection = () => {
   const navigate = useNavigate();
@@ -71,9 +72,7 @@ const HeroSection = () => {
             onClick={() => navigate('/login')}
             className="group px-8 py-4 text-lg font-semibold text-gray-700 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transform hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gray-300 focus:ring-opacity-50">
             <span className="flex items-center">
-              <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m-6-8h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2v-8a2 2 0 012-2z" />
-              </svg>
+              <Icons.demo className="mr-2 h-5 w-5" />
               Voir une démo
             </span>
           </button>
@@ -81,21 +80,15 @@ const HeroSection = () => {
         
         <div className="mt-12 flex items-center justify-center space-x-8 text-sm text-gray-500">
           <div className="flex items-center">
-            <svg className="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
+            <Icons.checkCircle className="h-5 w-5 text-green-500 mr-2" />
             Gratuit
           </div>
           <div className="flex items-center">
-            <svg className="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
+            <Icons.checkCircle className="h-5 w-5 text-green-500 mr-2" />
             Aucune carte requise
           </div>
           <div className="flex items-center">
-            <svg className="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-            </svg>
+            <Icons.checkCircle className="h-5 w-5 text-green-500 mr-2" />
             Support 24/7
           </div>
         </div>
