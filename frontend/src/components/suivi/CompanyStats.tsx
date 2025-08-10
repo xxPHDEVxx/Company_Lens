@@ -1,11 +1,10 @@
-import React from 'react';
 import type { Company } from '../../types/api';
 
 interface CompanyStatsProps {
   followedCompanies: Company[];
 }
 
-const CompanyStats: React.FC<CompanyStatsProps> = ({ followedCompanies }) => {
+const CompanyStats = ({ followedCompanies }: CompanyStatsProps) => {
   const recentlyUpdated = followedCompanies.filter(c => {
     if (!c.lastUpdate) return false;
     const lastUpdate = new Date(c.lastUpdate);

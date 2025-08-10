@@ -1,5 +1,5 @@
-import React from 'react';
 import { MapPin, Phone, Mail, Globe } from 'lucide-react';
+
 
 interface ContactInfoProps {
   contact: {
@@ -16,7 +16,7 @@ interface ContactInfoProps {
   };
 }
 
-const ContactInfo: React.FC<ContactInfoProps> = ({ contact }) => {
+const ContactInfo = ({ contact }: ContactInfoProps) => {
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <h2 className="text-lg font-semibold text-gray-900 mb-4">Informations de Contact</h2>

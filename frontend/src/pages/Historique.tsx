@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import MainContentLayout from '../components/layout/MainContentLayout';
 import ActivityFilters from '../components/historique/ActivityFilters';
 import ActivityTimeline from '../components/historique/ActivityTimeline';
@@ -6,7 +6,7 @@ import { mockActivities } from '../components/historique/mockData';
 import type { ActivityType, DateRange } from '../components/historique/types';
 import { filterActivitiesByType, filterActivitiesByDateRange } from '../components/historique/utils';
 
-const HistoriqueContent: React.FC = () => {
+const HistoriqueContent = () => {
   const [filterType, setFilterType] = useState<ActivityType>('all');
   const [filterDateRange, setFilterDateRange] = useState<DateRange>('all');
 
@@ -51,7 +51,7 @@ const HistoriqueContent: React.FC = () => {
   );
 };
 
-const Historique: React.FC = () => {
+const Historique = () => {
   return <HistoriqueContent />;
 };
 

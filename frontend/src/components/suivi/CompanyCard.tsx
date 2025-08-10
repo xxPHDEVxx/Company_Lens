@@ -1,22 +1,22 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Company } from '../../types/api';
 
 interface CompanyCardProps {
   company: Company;
   onUnfollow: (companyId: string) => void;
-  getStatusBadge: (status: 'active' | 'inactive') => React.ReactNode;
-  getRegionBadge: (region: 'flanders' | 'wallonia' | 'brussels') => React.ReactNode;
+  getStatusBadge: (status: 'active' | 'inactive') => ReactNode;
+  getRegionBadge: (region: 'flanders' | 'wallonia' | 'brussels') => ReactNode;
   formatDate: (dateString: string) => string;
 }
 
-const CompanyCard: React.FC<CompanyCardProps> = ({
+const CompanyCard = ({
   company,
   onUnfollow,
   getStatusBadge,
   getRegionBadge,
   formatDate,
-}) => {
+}: CompanyCardProps) => {
   const navigate = useNavigate();
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-200">

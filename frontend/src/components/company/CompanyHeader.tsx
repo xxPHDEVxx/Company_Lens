@@ -1,4 +1,3 @@
-import React from 'react';
 import { Building2, MapPin, Calendar, Shield } from 'lucide-react';
 
 interface CompanyHeaderProps {
@@ -13,7 +12,7 @@ interface CompanyHeaderProps {
   };
 }
 
-const CompanyHeader: React.FC<CompanyHeaderProps> = ({ company }) => {
+const CompanyHeader = ({ company }: CompanyHeaderProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':

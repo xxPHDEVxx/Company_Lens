@@ -1,42 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import MainContentLayout from '../components/layout/MainContentLayout';
 import { CompanyStats, CompanyFilters, CompanyList } from '../components/suivi';
-import { companyApi } from '../services/api';
+import { useFollowedCompanies, useUnfollowCompany } from '../hooks/queries';
 import type { Company } from '../types/api';
 
 // Type for followed company (using Company type from API)
 type FollowedCompany = Company;
 
 
-const SuiviContent: React.FC = () => {
-  const [followedCompanies, setFollowedCompanies] = useState<FollowedCompany[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const SuiviContent = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterRegion, setFilterRegion] = useState<'all' | 'flanders' | 'wallonia' | 'brussels'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'followedSince' | 'lastUpdate'>('followedSince');
 
-  useEffect(() => {
-    const fetchFollowedCompanies = async () => {
-      try {
-        setLoading(true);
-        const data = await companyApi.getFollowed();
-        setFollowedCompanies(data);
-      } catch (err) {
-        setError('Erreur lors du chargement des entreprises suivies');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFollowedCompanies();
-  }, []);
+  // Use React Query hooks
+  const { data: followedCompanies = [], isLoading, error } = useFollowedCompanies();
+  const unfollowMutation = useUnfollowCompany();
 
   const handleUnfollow = async (companyId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir arrêter de suivre cette entreprise ?')) {
       try {
-        await companyApi.unfollow(companyId);
-        setFollowedCompanies(prev => prev.filter(company => company.id !== companyId));
+        await unfollowMutation.mutateAsync(companyId);
       } catch (err) {
         alert('Erreur lors du désabonnement de l\'entreprise');
       }
@@ -80,7 +64,7 @@ const SuiviContent: React.FC = () => {
           </div>
 
           {/* Loading State */}
-          {loading && (
+          {isLoading && (
             <div className="bg-white rounded-xl shadow-lg p-12">
               <div className="flex flex-col items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mb-4"></div>
@@ -90,7 +74,7 @@ const SuiviContent: React.FC = () => {
           )}
 
           {/* Error State */}
-          {error && !loading && (
+          {error && !isLoading && (
             <div className="bg-white rounded-xl shadow-lg p-12">
               <div className="text-center">
                 <div className="text-red-600 mb-4">
@@ -99,13 +83,13 @@ const SuiviContent: React.FC = () => {
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
-                <p className="text-gray-600">{error}</p>
+                <p className="text-gray-600">{error instanceof Error ? error.message : 'Erreur lors du chargement des entreprises suivies'}</p>
               </div>
             </div>
           )}
 
           {/* Main Content */}
-          {!loading && !error && (
+          {!isLoading && !error && (
             <>
               {/* Filters and Stats */}
               <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
@@ -134,7 +118,7 @@ const SuiviContent: React.FC = () => {
   );
 };
 
-const Suivi: React.FC = () => {
+const Suivi = () => {
   return <SuiviContent />;
 };
 

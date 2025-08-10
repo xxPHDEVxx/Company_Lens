@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Company } from '../../types/api';
 
@@ -7,7 +6,7 @@ interface SearchResultsProps {
   searchResults: Company[];
 }
 
-const SearchResults: React.FC<SearchResultsProps> = ({ isSearching, searchResults }) => {
+const SearchResults = ({ isSearching, searchResults }: SearchResultsProps) => {
   const navigate = useNavigate();
 
   if (isSearching) {

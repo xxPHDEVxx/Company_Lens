@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Download, Share2, Star } from 'lucide-react';
 import GroupHeader from '../components/groupes/GroupHeader';
@@ -6,65 +6,32 @@ import GroupOverview from '../components/groupes/GroupOverview';
 import GroupCompaniesView from '../components/groupes/GroupCompaniesView';
 import GroupStatistics from '../components/groupes/GroupStatistics';
 import { getGroupIcon } from '../components/groupes';
-import { groupApi, companyApi } from '../services/api';
-import type { Company, CompanyGroup } from '../types/api';
+import { useGroup, useGroupCompanies, useFollowedCompanies, useRemoveCompanyFromGroup, useAddCompaniesToGroup } from '../hooks/queries';
 
-const GroupDetails: React.FC = () => {
+const GroupDetails = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   
   const [activeTab, setActiveTab] = useState('overview');
-  const [group, setGroup] = useState<CompanyGroup | null>(null);
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [followedCompanies, setFollowedCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   
   // Determine the source page from location state or default to 'Groupes'
   const sourcePage = location.state?.from || 'Groupes';
   const sourceRoute = location.state?.route || '/groupes';
 
-  useEffect(() => {
-    const fetchGroup = async () => {
-      if (!groupId) {
-        setError('ID du groupe manquant');
-        return;
-      }
+  // Use React Query hooks
+  const { data: group, isLoading: groupLoading, error: groupError } = useGroup(groupId);
+  const { data: companies = [], isLoading: companiesLoading } = useGroupCompanies(groupId);
+  const { data: followedCompanies = [] } = useFollowedCompanies();
+  const removeCompanyMutation = useRemoveCompanyFromGroup();
+  const addCompaniesMutation = useAddCompaniesToGroup();
 
-      try {
-        setLoading(true);
-        // Fetch group details
-        const groupData = await groupApi.getById(groupId);
-        setGroup(groupData);
-
-        // Fetch companies in this group
-        const companiesInGroup = await groupApi.getCompanies(groupId);
-        setCompanies(companiesInGroup);
-
-        // Fetch all followed companies (for adding to group)
-        const allFollowed = await companyApi.getFollowed();
-        setFollowedCompanies(allFollowed);
-      } catch (err) {
-        setError('Erreur lors du chargement des données du groupe');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchGroup();
-  }, [groupId]);
+  const loading = groupLoading || companiesLoading;
+  const error = groupError;
 
   const handleDeleteCompanyFromGroup = async (groupId: string, companyId: string) => {
     try {
-      await groupApi.removeCompany(groupId, companyId);
-      setCompanies(prev => prev.filter(company => company.id !== companyId));
-      if (group) {
-        setGroup({
-          ...group,
-          companiesCount: Math.max(0, group.companiesCount - 1)
-        });
-      }
+      await removeCompanyMutation.mutateAsync({ groupId, companyId });
     } catch (err) {
       alert('Erreur lors de la suppression de l\'entreprise du groupe');
     }
@@ -72,16 +39,7 @@ const GroupDetails: React.FC = () => {
 
   const handleAddCompaniesToGroup = async (groupId: string, companyIds: string[]) => {
     try {
-      await groupApi.addCompanies(groupId, companyIds);
-      // Refresh the companies in group
-      const updatedCompanies = await groupApi.getCompanies(groupId);
-      setCompanies(updatedCompanies);
-      if (group) {
-        setGroup({
-          ...group,
-          companiesCount: updatedCompanies.length
-        });
-      }
+      await addCompaniesMutation.mutateAsync({ groupId, companyIds });
     } catch (err) {
       alert('Erreur lors de l\'ajout des entreprises au groupe');
     }
@@ -150,7 +108,7 @@ const GroupDetails: React.FC = () => {
                 </svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
-              <p className="text-gray-600">{error || 'Groupe introuvable'}</p>
+              <p className="text-gray-600">{error instanceof Error ? error.message : 'Groupe introuvable'}</p>
             </div>
           </div>
         </div>

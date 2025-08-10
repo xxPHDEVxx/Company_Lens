@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Download, Share2, Star } from 'lucide-react';
 import CompanyHeader from '../components/company/CompanyHeader';
@@ -7,43 +7,21 @@ import EstablishmentsList from '../components/company/EstablishmentsList';
 import ContactInfo from '../components/company/ContactInfo';
 import FinancialCharts from '../components/company/FinancialCharts';
 import FinancialMetrics from '../components/company/FinancialMetrics';
-import { companyApi } from '../services/api';
-import type { Company } from '../types/api';
+import { useCompany } from '../hooks/queries';
 
-const CompanyDetails: React.FC = () => {
+const CompanyDetails = () => {
   const { companyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   
   const [activeTab, setActiveTab] = useState('general');
-  const [company, setCompany] = useState<Company | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   
   // Determine the source page from location state or default to 'Suivi'
   const sourcePage = location.state?.from || 'Suivi';
   const sourceRoute = location.state?.route || '/suivi';
 
-  useEffect(() => {
-    const fetchCompany = async () => {
-      if (!companyId) {
-        setError('ID de l\'entreprise manquant');
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const data = await companyApi.getById(companyId);
-        setCompany(data);
-      } catch (err) {
-        setError('Erreur lors du chargement des données de l\'entreprise');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCompany();
-  }, [companyId]);
+  // Use React Query hook
+  const { data: company, isLoading, error } = useCompany(companyId);
 
   const tabs = [
     { id: 'general', label: 'Informations Générales' },
@@ -52,7 +30,7 @@ const CompanyDetails: React.FC = () => {
     { id: 'contact', label: 'Contact' },
   ];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -83,6 +61,7 @@ const CompanyDetails: React.FC = () => {
   }
 
   if (error || !company) {
+    const errorMessage = error instanceof Error ? error.message : 'Entreprise introuvable';
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
@@ -109,7 +88,7 @@ const CompanyDetails: React.FC = () => {
                 </svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
-              <p className="text-gray-600">{error || 'Entreprise introuvable'}</p>
+              <p className="text-gray-600">{errorMessage}</p>
             </div>
           </div>
         </div>

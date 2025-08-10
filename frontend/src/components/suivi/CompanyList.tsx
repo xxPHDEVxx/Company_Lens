@@ -1,4 +1,3 @@
-import React from 'react';
 import CompanyCard from './CompanyCard';
 import { getStatusBadge, getRegionBadge } from './CompanyBadges';
 import type { Company } from '../../types/api';
@@ -8,7 +7,7 @@ interface CompanyListProps {
   onUnfollow: (companyId: string) => void;
 }
 
-const CompanyList: React.FC<CompanyListProps> = ({ companies, onUnfollow }) => {
+const CompanyList = ({ companies, onUnfollow }: CompanyListProps) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-BE', {
       day: 'numeric',

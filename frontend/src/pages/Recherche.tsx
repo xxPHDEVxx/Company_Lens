@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import MainContentLayout from '../components/layout/MainContentLayout';
 import { SearchForm, SearchResults, RecentSearches } from '../components/recherche';
-import { companyApi, recentSearchApi } from '../services/api';
-import type { Company } from '../types/api';
+import { useCompanySearch, useAddRecentSearch } from '../hooks/queries';
 
 interface SearchFilters {
   vatNumber: string;
@@ -11,19 +10,23 @@ interface SearchFilters {
   region: string;
 }
 
-const RechercheContent: React.FC = () => {
+const RechercheContent = () => {
   const [filters, setFilters] = useState<SearchFilters>({
     vatNumber: '',
     companyType: '',
     status: '',
     region: '',
   });
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Company[]>([]);
+  const [searchEnabled, setSearchEnabled] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // Use React Query hooks
+  const { data: searchResults = [], isLoading: isSearching } = useCompanySearch(filters, searchEnabled);
+  const addRecentSearchMutation = useAddRecentSearch();
 
   const handleFilterChange = (key: keyof SearchFilters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    setSearchEnabled(false); // Disable auto-search when filters change
   };
 
   const handleSearch = async () => {
@@ -32,26 +35,16 @@ const RechercheContent: React.FC = () => {
       return;
     }
 
-    setIsSearching(true);
     setHasSearched(true);
+    setSearchEnabled(true); // Enable the query
     
-    try {
-      const results = await companyApi.search(filters);
-      setSearchResults(results);
-      
-      // Add to recent searches if we have results
-      if (results.length > 0) {
-        const firstResult = results[0];
-        await recentSearchApi.add({
-          name: firstResult.name,
-          vat: firstResult.vat
-        });
-      }
-    } catch (error) {
-      // Handle search error
-      alert('Erreur lors de la recherche d\'entreprises');
-    } finally {
-      setIsSearching(false);
+    // Add to recent searches if we have results
+    if (searchResults.length > 0) {
+      const firstResult = searchResults[0];
+      await addRecentSearchMutation.mutateAsync({
+        name: firstResult.name,
+        vat: firstResult.vat
+      });
     }
   };
 
@@ -96,7 +89,7 @@ const RechercheContent: React.FC = () => {
   );
 };
 
-const Recherche: React.FC = () => {
+const Recherche = () => {
   return <RechercheContent />;
 };
 

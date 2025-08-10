@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../services/api';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
@@ -17,7 +17,7 @@ export const useLogout = () => {
   return context;
 };
 
-export const LogoutProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const LogoutProvider = ({ children }: { children: ReactNode }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
 

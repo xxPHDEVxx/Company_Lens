@@ -1,27 +1,9 @@
-import { useState, useEffect } from 'react';
-import { recentSearchApi } from '../../services/api';
-import type { RecentSearch } from '../../types/api';
+import { useRecentSearches } from '../../hooks/queries';
 
 const RecentSearches = () => {
-  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: recentSearches = [], isLoading } = useRecentSearches();
 
-  useEffect(() => {
-    const fetchRecentSearches = async () => {
-      try {
-        const data = await recentSearchApi.getAll();
-        setRecentSearches(data);
-      } catch (err) {
-        // Handle error silently
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecentSearches();
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="p-6 border-b border-gray-200">

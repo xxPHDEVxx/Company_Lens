@@ -1,53 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import MainContentLayout from '../components/layout/MainContentLayout';
-import { GroupForm, GroupList, getGroupIcon } from '../components/groupes';
-import { groupApi } from '../services/api';
+import { GroupForm, GroupList, getGroupIcon, groupIcons } from '../components/groupes';
+import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from '../hooks/queries';
 import type { CompanyGroup } from '../types/api';
 
 const GroupesContent = () => {
-  const [groups, setGroups] = useState<CompanyGroup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [editingGroup, setEditingGroup] = useState<CompanyGroup | null>(null);
 
-  useEffect(() => {
-    fetchGroups();
-  }, []);
-
-  const fetchGroups = async () => {
-    try {
-      setLoading(true);
-      const data = await groupApi.getAll();
-      setGroups(data);
-    } catch (err) {
-      setError('Erreur lors du chargement des groupes');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use React Query hooks
+  const { data: groups = [], isLoading, error } = useGroups();
+  const createGroupMutation = useCreateGroup();
+  const updateGroupMutation = useUpdateGroup();
+  const deleteGroupMutation = useDeleteGroup();
 
   const handleSubmitGroup = async (formData: { name: string; description: string; icon: string }) => {
     if (!formData.name.trim()) return;
 
     try {
       if (formMode === 'create') {
-        const newGroup = await groupApi.create({
+        await createGroupMutation.mutateAsync({
           name: formData.name,
           description: formData.description,
           icon: formData.icon,
         });
-        setGroups(prev => [...prev, newGroup]);
       } else if (formMode === 'edit' && editingGroup) {
-        const updatedGroup = await groupApi.update(editingGroup.id, {
-          name: formData.name,
-          description: formData.description,
-          icon: formData.icon,
+        await updateGroupMutation.mutateAsync({
+          id: editingGroup.id,
+          updates: {
+            name: formData.name,
+            description: formData.description,
+            icon: formData.icon,
+          },
         });
-        setGroups(prev => prev.map(group => 
-          group.id === editingGroup.id ? updatedGroup : group
-        ));
       }
       setShowGroupForm(false);
       setEditingGroup(null);
@@ -59,8 +45,7 @@ const GroupesContent = () => {
   const handleDeleteGroup = async (groupId: string) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce groupe ?')) {
       try {
-        await groupApi.delete(groupId);
-        setGroups(prev => prev.filter(group => group.id !== groupId));
+        await deleteGroupMutation.mutateAsync(groupId);
       } catch (err) {
         alert('Erreur lors de la suppression du groupe');
       }
@@ -129,7 +114,7 @@ const GroupesContent = () => {
           )}
 
           {/* Loading State */}
-          {loading && (
+          {isLoading && (
             <div className="bg-white rounded-xl shadow-lg p-12">
               <div className="flex flex-col items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mb-4"></div>
@@ -139,7 +124,7 @@ const GroupesContent = () => {
           )}
 
           {/* Error State */}
-          {error && !loading && (
+          {error && !isLoading && (
             <div className="bg-white rounded-xl shadow-lg p-12">
               <div className="text-center">
                 <div className="text-red-600 mb-4">
@@ -148,13 +133,13 @@ const GroupesContent = () => {
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</h3>
-                <p className="text-gray-600">{error}</p>
+                <p className="text-gray-600">{error instanceof Error ? error.message : 'Erreur lors du chargement des groupes'}</p>
               </div>
             </div>
           )}
 
           {/* Groups Grid */}
-          {!loading && !error && (
+          {!isLoading && !error && (
             <GroupList
               groups={groups}
               onDeleteGroup={handleDeleteGroup}
