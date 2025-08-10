@@ -13,6 +13,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { LogoutProvider } from './contexts/LogoutContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { queryClient } from './lib/queryClient';
 
 function AppContent() {
   const location = useLocation();
@@ -86,13 +89,16 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <SidebarProvider>
-        <LogoutProvider>
-          <AppContent />
-        </LogoutProvider>
-      </SidebarProvider>
-    </Router>
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <SidebarProvider>
+          <LogoutProvider>
+            <AppContent />
+          </LogoutProvider>
+        </SidebarProvider>
+      </Router>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }
 
