@@ -1,5 +1,5 @@
 import React from 'react';
-import { StabilityIndicator } from './types';
+import type { StabilityIndicator } from './types';
 import { getStabilityBgColor, getStabilityTextColor, getStabilityBorderColor } from './utils';
 
 interface StabilityCardProps {

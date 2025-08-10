@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { MetricCardProps } from './types';
+import type { MetricCardProps } from './types';
 import { formatCurrency, formatPercentage } from './utils';
 
 const MetricCard: React.FC<MetricCardProps> = ({

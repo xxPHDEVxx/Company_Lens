@@ -1,9 +1,9 @@
 import React from 'react';
-import { Euro, TrendingUp, BarChart3, PieChart } from 'lucide-react';
+import { Euro, BarChart3, PieChart } from 'lucide-react';
 import { 
   MetricCard, 
   StabilityCard, 
-  FinancialMetricsData, 
+  type FinancialMetricsData, 
   calculateStability 
 } from './financial-metrics';
 

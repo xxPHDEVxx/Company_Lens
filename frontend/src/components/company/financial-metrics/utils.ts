@@ -1,5 +1,5 @@
 import { TrendingUp, TrendingDown, Shield, Activity, AlertTriangle } from 'lucide-react';
-import { FinancialMetricsData, StabilityIndicator, StabilityColor } from './types';
+import type { FinancialMetricsData, StabilityIndicator, StabilityColor } from './types';
 
 export const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('fr-BE', {
