@@ -73,11 +73,6 @@ const RechercheContent = () => {
             isSearching={isSearching}
           />
 
-          {/* Recent Searches */}
-          <div className="mt-8 mb-8">
-            <RecentSearches />
-          </div>
-
           {/* Search Results */}
           {hasSearched && (
             <SearchResults 
@@ -85,6 +80,11 @@ const RechercheContent = () => {
               searchResults={searchResults}
             />
           )}
+
+          {/* Recent Searches */}
+          <div className="mt-8 mb-8">
+            <RecentSearches />
+          </div>
     </MainContentLayout>
   );
 };
