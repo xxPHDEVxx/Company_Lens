@@ -9,6 +9,7 @@ import GroupDetails from './pages/GroupDetails';
 import Suivi from './pages/Suivi';
 import CompanyDetails from './pages/CompanyDetails';
 import UserProfile from './pages/UserProfile';
+import EditProfile from './pages/EditProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { SidebarProvider } from './contexts/SidebarContext';
@@ -80,6 +81,11 @@ function AppContent() {
         <Route path="/profile" element={
           <ProtectedRoute>
             <UserProfile />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile/edit" element={
+          <ProtectedRoute>
+            <EditProfile />
           </ProtectedRoute>
         } />
       </Routes>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface ProfileHeaderProps {
   userName: string;
@@ -9,6 +10,8 @@ interface ProfileHeaderProps {
  * En-tête du profil utilisateur avec avatar et informations principales
  */
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userName, userEmail }) => {
+  const navigate = useNavigate();
+  
   // Obtenir les initiales pour l'avatar
   const getInitials = (name: string): string => {
     return name
@@ -46,7 +49,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ userName, userEmail }) =>
         </div>
 
         {/* Bouton d'édition du profil */}
-        <button className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors duration-200 flex items-center space-x-2">
+        <button 
+          onClick={() => navigate('/profile/edit')}
+          className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors duration-200 flex items-center space-x-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
