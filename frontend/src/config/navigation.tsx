@@ -65,19 +65,6 @@ export const navigationItems: NavigationItem[] = [
       </svg>
     ),
   },
-  {
-    id: 'historique',
-    label: 'Historique',
-    route: '/historique',
-    activeColor: 'bg-gray-600/20 text-gray-400 border-gray-500',
-    iconHoverColor: 'group-hover:text-gray-400',
-    indicatorColor: 'bg-gray-500',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
 ];
 
 export const getActiveItem = (pathname: string): string => {
@@ -85,6 +72,5 @@ export const getActiveItem = (pathname: string): string => {
   if (pathname === '/recherche') return 'recherche';
   if (pathname.startsWith('/groupes')) return 'groupes';
   if (pathname === '/suivi' || pathname.startsWith('/company/')) return 'suivi';
-  if (pathname === '/historique') return 'historique';
   return 'dashboard';
 };

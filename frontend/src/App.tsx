@@ -7,7 +7,6 @@ import Recherche from './pages/Recherche';
 import Groupes from './pages/Groupes';
 import GroupDetails from './pages/GroupDetails';
 import Suivi from './pages/Suivi';
-import Historique from './pages/Historique';
 import CompanyDetails from './pages/CompanyDetails';
 import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
@@ -24,7 +23,6 @@ function AppContent() {
     '/recherche',
     '/groupes',
     '/suivi',
-    '/historique'
   ].some(route => location.pathname.startsWith(route)) ||
   location.pathname.startsWith('/company/');
 
@@ -70,11 +68,6 @@ function AppContent() {
         <Route path="/suivi" element={
           <ProtectedRoute>
             <Suivi />
-          </ProtectedRoute>
-        } />
-        <Route path="/historique" element={
-          <ProtectedRoute>
-            <Historique />
           </ProtectedRoute>
         } />
         <Route path="/company/:companyId" element={
