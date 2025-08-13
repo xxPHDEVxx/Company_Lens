@@ -8,6 +8,7 @@ import Groupes from './pages/Groupes';
 import GroupDetails from './pages/GroupDetails';
 import Suivi from './pages/Suivi';
 import CompanyDetails from './pages/CompanyDetails';
+import UserProfile from './pages/UserProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { SidebarProvider } from './contexts/SidebarContext';
@@ -23,6 +24,7 @@ function AppContent() {
     '/recherche',
     '/groupes',
     '/suivi',
+    '/profile',
   ].some(route => location.pathname.startsWith(route)) ||
   location.pathname.startsWith('/company/');
 
@@ -73,6 +75,11 @@ function AppContent() {
         <Route path="/company/:companyId" element={
           <ProtectedRoute>
             <CompanyDetails />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <UserProfile />
           </ProtectedRoute>
         } />
       </Routes>

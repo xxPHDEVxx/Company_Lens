@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfileProps {
   isCollapsed: boolean;
@@ -8,6 +9,7 @@ interface UserProfileProps {
 const UserProfile: React.FC<UserProfileProps> = ({ isCollapsed, onLogout }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -102,13 +104,23 @@ interface UserDropdownProps {
   onClose: () => void;
 }
 
-const UserDropdown: React.FC<UserDropdownProps> = ({ isCollapsed, onLogout }) => (
+const UserDropdown: React.FC<UserDropdownProps> = ({ isCollapsed, onLogout, onClose }) => {
+  const navigate = useNavigate();
+  
+  const handleProfileClick = () => {
+    navigate('/profile');
+    onClose();
+  };
+
+  return (
   <div className={`absolute bg-slate-800 rounded-xl shadow-2xl border border-slate-700/50 backdrop-blur-lg overflow-hidden z-[100] ${
     isCollapsed 
       ? 'left-full bottom-0 ml-3 whitespace-nowrap min-w-[200px]' 
       : 'bottom-full left-0 right-0 mb-2'
   }`}>
-    <button className="block w-full text-left px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all duration-200">
+    <button 
+      onClick={handleProfileClick}
+      className="block w-full text-left px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all duration-200">
       <div className="flex items-center space-x-3">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -138,6 +150,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ isCollapsed, onLogout }) =>
       </button>
     </div>
   </div>
-);
+  );
+};
 
 export default UserProfile;
