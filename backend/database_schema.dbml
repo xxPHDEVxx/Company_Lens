@@ -1,0 +1,365 @@
+// Company Lens Database Schema - Belgian Company Analysis Platform
+// Generated for PostgreSQL with Django ORM compatibility
+// This schema supports JWT authentication, Belgian company data, and user collaboration features
+
+Project company_lens {
+  database_type: 'PostgreSQL'
+  Note: 'Belgian company analysis platform with AI-powered data scraping'
+}
+
+// ==================== USER & AUTHENTICATION ====================
+
+// ==================== USER & AUTHENTICATION ====================
+
+Table user {
+  id int [pk, increment, note: 'Primary key']
+  email varchar(255) [unique, not null, note: 'User email address - used for login']
+  password_hash varchar(255) [not null, note: 'Hashed password using Django pbkdf2_sha256']
+  name varchar(255) [not null, note: 'Full name of the user']
+  company_id int 
+  is_active boolean [default: true, note: 'Account active status']
+  is_superuser boolean [default: false, note: 'Django admin access']
+  date_joined timestamp [default: `now()`, note: 'Account creation date']
+  last_login timestamp [null, note: 'Last successful login']
+  email_verified boolean [default: false, note: 'Email verification status']
+  
+  // Profile fields
+  phone varchar(20) [null, note: 'User phone number']
+  job_title varchar(100) [null, note: 'User job title']
+  bio text [null, note: 'User biography']
+  avatar_url varchar(500) [null, note: 'Profile picture URL']
+  
+  // Preferences
+  language varchar(2) [default: 'fr', note: 'Preferred language (fr/nl/en)']
+  timezone varchar(50) [default: 'Europe/Brussels', note: 'User timezone']
+  notification_email boolean [default: true, note: 'Email notifications enabled']
+  notification_push boolean [default: false, note: 'Push notifications enabled']
+  
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  
+  indexes {
+    email
+    (email, password_hash) [note: 'For authentication queries']
+    is_active
+    company_id
+  }
+}
+
+Table jwt_token {
+  id int [pk, increment]
+  user_id int 
+  token_hash varchar(255) [unique, not null, note: 'SHA256 hash of JWT token']
+  refresh_token_hash varchar(255) [unique, null, note: 'SHA256 hash of refresh token']
+  issued_at timestamp [default: `now()`]
+  expires_at timestamp [not null]
+  refresh_expires_at timestamp [null]
+  is_revoked boolean [default: false]
+  device_info text [null, note: 'User agent and device info']
+  ip_address varchar(45) [null, note: 'IP address of token creation']
+  
+  indexes {
+    token_hash
+    refresh_token_hash
+    user_id
+    (user_id, is_revoked)
+    expires_at
+  }
+}
+
+// ==================== COMPANY CORE DATA ====================
+
+Table company {
+  id int [pk, increment]
+  vat_number varchar(20) [unique, not null, note: 'Belgian VAT number without dots']
+  name varchar(500) [not null, note: 'Company legal name']
+  status varchar(20) [not null, note: 'active/inactive/bankruptcy/liquidation']
+  legal_form varchar(100) [not null, note: 'SA, SPRL, ASBL, etc.']
+  creation_date date [not null, note: 'Company establishment date']
+  
+  // Company details
+  company_type varchar(50) [not null, note: 'private-company/public-company/non-profit/etc']
+  company_size varchar(20) [null, note: 'micro/small/medium/large']
+  company_description text [null, note: 'Company description']
+  
+  // Metadata
+  last_scraped_at timestamp [null, note: 'Last AI scraper update']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+  
+  indexes {
+    vat_number
+    name
+    status
+    company_type
+    company_size
+    creation_date
+  }
+}
+
+Table address {
+  id int [pk, increment]
+  company_id int 
+  street varchar(255) [not null]
+  street_number varchar(20) [not null]
+  postal_box varchar(20) [null]
+  postal_code varchar(10) [not null]
+  city varchar(100) [not null]
+  province varchar(50) [null]
+  region varchar(20) [null, note: 'flanders/wallonia/brussels']
+  country varchar(2) [default: 'BE', note: 'ISO country code']
+  
+  indexes {
+    company_id
+    postal_code
+    city
+    region
+  }
+}
+
+Table contact {
+  id int [pk, increment]
+  company_id int
+  email varchar(255) [null]
+  phone varchar(50) [null]
+  website varchar(500) [null]
+  
+  indexes {
+    company_id
+  }
+}
+
+// ==================== FINANCIAL DATA ====================
+
+Table company_finance {
+  id int [pk, increment]
+  company_id int 
+  year int [not null, note: 'Financial year']
+  
+  // Financial metrics
+  revenue decimal(15,2) [null, note: 'Annual revenue in EUR']
+  gross_margin decimal(15,2) [null, note: 'Gross margin in EUR']
+  profit decimal(15,2) [null, note: 'Net profit in EUR']
+  
+  // Employment
+  employees_count int [null, note: 'Number of employees']
+  
+  // Metadata
+  data_source varchar(50) [null, note: 'NBB/Belfirst/Manual/AI']
+  
+  indexes {
+    (company_id, year) [unique]
+    company_id
+    year
+  }
+}
+
+// ==================== COMPANY ACTIVITIES ====================
+
+Table company_activity {
+  id int [pk, increment]
+  company_id int 
+  
+  // Belgian specific codes
+  nace_code varchar(10) [not null, note: 'NACE-BEL activity code']
+  nace_description text [null, note: 'NACE code description']
+  
+  // Additional categorization
+  sectors varchar[] [null, note: 'Industry sector']
+  activity_description text [null, note: 'Detailed activity description']
+  
+  indexes {
+    company_id
+    nace_code
+  }
+}
+
+// ==================== ESTABLISHMENT UNITS ====================
+
+Table establishment_unit {
+  id int [pk, increment]
+  company_id int
+  establishment_number varchar(20) [unique, not null, note: 'Belgian establishment unit number']
+  
+  // Unit details
+  name varchar(500) [not null, note: 'Establishment unit name']
+  status varchar(20) [not null, note: 'active/inactive']
+  start_date date [not null, note: 'Establishment start date']
+  end_date date [null, note: 'Closure date if inactive']
+  
+  // Location (denormalized for performance)
+  address_id int
+  
+  indexes {
+    company_id
+    establishment_number
+    status
+    address_id
+  }
+}
+
+// ==================== USER FEATURES ====================
+
+Table company_group {
+  id int [pk, increment]
+  user_id int 
+  name varchar(255) [not null, note: 'Group name']
+  description text [null, note: 'Group description']
+  icon varchar(50) [null, note: 'Icon identifier or emoji']
+  color varchar(7) [null, note: 'Hex color code']
+  companies_count int [default: 0, note: 'Cached count of companies']
+  
+  indexes {
+    user_id
+    (user_id, name) [unique]
+  }
+}
+
+Table group_company {
+  group_id int
+  company_id int 
+  added_at timestamp [default: `now()`]
+  
+  indexes {
+    (group_id, company_id) [unique]
+    group_id
+    company_id
+  }
+}
+
+Table user_followed_company {
+  id int [pk, increment]
+  user_id int 
+  company_id int 
+  
+  // Notification preferences
+  notify_financial_update boolean [default: true]
+  notify_status_change boolean [default: true]
+  notify_news boolean [default: false]
+  
+  // User metadata
+  notes text [null, note: 'User private notes']
+  tags varchar[] [null, note: 'User-defined tags']
+  
+  indexes {
+    (user_id, company_id) [unique]
+    user_id
+    company_id
+  }
+}
+
+Table recent_search {
+  id int [pk, increment]
+  user_id int 
+  company_id int 
+  
+  // Search details
+  search_query varchar(500) [not null, note: 'Original search query']
+  search_type varchar(50) [default: 'vat', note: 'vat/name/keyword']
+  vat_number varchar(20) [null, note: 'VAT if searched by VAT']
+  company_name varchar(500) [null, note: 'Company name if found']
+  
+  // Timestamps
+  searched_at timestamp [default: `now()`]
+  
+  indexes {
+    user_id
+    company_id
+    searched_at
+    (user_id, searched_at)
+  }
+}
+
+
+
+// ==================== RELATIONSHIPS DOCUMENTATION ====================
+
+// SYNTAXE CORRECTE DBML pour les références
+// Format: Ref: table.column > other_table.column
+// ou     Ref name: table.column > other_table.column
+
+// UTILISE UNE SEULE SYNTAXE - Version avec noms uniques pour chaque référence
+
+// User relationships
+Ref user_company: user.company_id > company.id
+
+// Company data relationships (one-to-one)
+Ref company_address: address.company_id - company.id
+Ref company_contact: contact.company_id - company.id
+Ref company_finance: company_finance.company_id - company.id
+Ref company_activity: company_activity.company_id - company.id
+Ref company_establishments: establishment_unit.company_id > company.id
+
+// Establishment unit address
+Ref establishment_unit_address: establishment_unit.address_id > address.id
+
+// User feature relationships  
+Ref group_owner: company_group.user_id > user.id
+Ref group_companies: group_company.group_id > company_group.id
+Ref group_company_link: group_company.company_id > company.id
+
+// Following relationships (junction table for many-to-many)
+Ref user_follows: user_followed_company.user_id > user.id
+Ref company_followed: user_followed_company.company_id > company.id
+
+// Search relationships
+Ref search_user: recent_search.user_id > user.id
+Ref search_company: recent_search.company_id > company.id
+
+// Authentication relationships
+Ref token_user: jwt_token.user_id > user.id
+
+
+// ==================== NOTES & INDEXES ====================
+
+Note: '''
+# Company Lens Database Schema
+
+## Overview
+This schema supports a Belgian company analysis platform with:
+- JWT-based authentication
+- Belgian company data (VAT, NACE codes, establishment units)
+- User collaboration features (groups, following)
+- Financial tracking and metrics
+
+## Key Design Decisions
+
+### Authentication
+- JWT tokens are hashed before storage for security
+- Refresh tokens support automatic token renewal
+- Device tracking for security auditing
+
+### Company Data
+- VAT numbers stored without dots for consistency
+- Financial data tracked yearly with source attribution
+- NACE-BEL codes for Belgian activity classification
+
+### User Features
+- Companies can be organized into user-defined groups
+- Recent searches tracked for quick access
+
+### Data Integrity
+- Proper CASCADE/SET NULL rules for referential integrity
+- Unique constraints on business keys
+- NOT NULL constraints on required fields
+- Check constraints implied through enums
+
+## Django Integration
+- Schema compatible with Django ORM
+- Uses Django's default auth fields (is_active, is_superuser)
+- JSONB fields map to Django's JSONField
+- Array fields map to Django's ArrayField
+
+## Belgian Specifics
+- VAT number format validation (10 digits)
+- NACE-BEL activity codes
+- Regions: Flanders, Wallonia, Brussels
+- Legal forms: SA, SPRL, ASBL, etc.
+- Establishment unit numbers with Belgian format
+
+## Security Considerations
+- Passwords hashed with Django's pbkdf2_sha256
+- JWT tokens hashed before storage
+- Row-level security through user relationships
+- Audit logging for compliance
+- IP tracking for security monitoring
