@@ -160,9 +160,6 @@ class CompanySchema(BaseModel):
     company_size: Optional[CompanySizeEnum] = Field(
         None, description="Size of the company"
     )
-    minimum_help_amount: int = Field(
-        default=0, description="default minimum_help_amount"
-    )
     company_type: List[CompanyTypeEnum] = Field(..., description="Type of company.")
 
     address: AddressSchema = Field(..., description="Address of the company.")
