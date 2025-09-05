@@ -10,19 +10,19 @@ import {
 type SettingsTab = 'general' | 'notifications' | 'privacy' | 'security' | 'data';
 
 /**
- * Page principale des paramètres
- * Permet aux utilisateurs de gérer tous leurs paramètres de compte
+ * Page principale des paramï¿½tres
+ * Permet aux utilisateurs de gï¿½rer tous leurs paramï¿½tres de compte
  */
 const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
 
   // Configuration des onglets
   const tabs = [
-    { id: 'general' as SettingsTab, label: 'Général', icon: '™' },
-    { id: 'notifications' as SettingsTab, label: 'Notifications', icon: '=' },
-    { id: 'privacy' as SettingsTab, label: 'Confidentialité', icon: '=' },
-    { id: 'security' as SettingsTab, label: 'Sécurité', icon: '=á' },
-    { id: 'data' as SettingsTab, label: 'Données', icon: '=¾' },
+    { id: 'general' as SettingsTab, label: 'GÃ©nÃ©ral'},
+    { id: 'notifications' as SettingsTab, label: 'Notifications'},
+    { id: 'privacy' as SettingsTab, label: 'ConfidentialitÃ©'},
+    { id: 'security' as SettingsTab, label: 'SÃ©curitÃ©'},
+    { id: 'data' as SettingsTab, label: 'DonnÃ©es'},
   ];
 
   // Rendu du contenu selon l'onglet actif
@@ -46,16 +46,16 @@ const Settings: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* En-tête de la page */}
+        {/* En-tï¿½te de la page */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Paramètres</h1>
+          <h1 className="text-3xl font-bold text-gray-900">ParamÃ¨tres</h1>
           <p className="mt-2 text-gray-600">
-            Gérez vos préférences et configurez votre compte Company Lens
+            GÃ©rez vos prÃ©fÃ©rences et configurez votre compte Company Lens
           </p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Navigation latérale */}
+          {/* Navigation latï¿½rale */}
           <nav className="lg:w-64 flex-shrink-0">
             <ul className="space-y-1 bg-white rounded-lg shadow-sm border border-gray-200 p-2">
               {tabs.map((tab) => (
@@ -70,7 +70,6 @@ const Settings: React.FC = () => {
                       }
                     `}
                   >
-                    <span className="text-xl">{tab.icon}</span>
                     <span>{tab.label}</span>
                   </button>
                 </li>
