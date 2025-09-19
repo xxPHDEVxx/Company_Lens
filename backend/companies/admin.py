@@ -42,8 +42,8 @@ class CompanyAdmin(admin.ModelAdmin):
 
 @admin.register(Establishment)
 class EstablishmentAdmin(admin.ModelAdmin):
-    list_display = ['name', 'company', 'type', 'city', 'status', 'employees']
-    list_filter = ['type', 'status']
+    list_display = ['name', 'company', 'unit_number', 'city', 'status']
+    list_filter = ['status']
     search_fields = ['name', 'company__name', 'city', 'unit_number']
     raw_id_fields = ['company']
 

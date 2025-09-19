@@ -173,15 +173,6 @@ class Company(models.Model):
 class Establishment(models.Model):
     """Establishment model representing company locations/branches."""
     
-    TYPE_CHOICES = [
-        ('headquarters', _('Headquarters')),
-        ('branch', _('Branch')),
-        ('production', _('Production Site')),
-        ('warehouse', _('Warehouse')),
-        ('office', _('Office')),
-        ('retail', _('Retail Location')),
-    ]
-    
     STATUS_CHOICES = [
         ('active', _('Active')),
         ('inactive', _('Inactive')),
@@ -203,12 +194,6 @@ class Establishment(models.Model):
         help_text=_('KBO unit number')
     )
     name = models.CharField(_('establishment name'), max_length=255)
-    type = models.CharField(
-        _('type'),
-        max_length=20,
-        choices=TYPE_CHOICES,
-        default='branch'
-    )
     
     # Address
     street = models.CharField(_('street'), max_length=255)
@@ -217,12 +202,7 @@ class Establishment(models.Model):
     postal_code = models.CharField(_('postal code'), max_length=10)
     country = models.CharField(_('country'), max_length=2, default='BE')
     
-    # Contact
-    phone = models.CharField(_('phone'), max_length=20, blank=True)
-    email = models.EmailField(_('email'), blank=True)
-    
     # Details
-    employees = models.IntegerField(_('number of employees'), blank=True, null=True)
     creation_date = models.DateField(_('creation date'), blank=True, null=True)
     status = models.CharField(
         _('status'),

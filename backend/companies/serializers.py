@@ -9,19 +9,29 @@ from .models import Company, Establishment, FinancialData, CompanyFollower
 
 
 class EstablishmentSerializer(serializers.ModelSerializer):
-    """Serializer for Establishment model."""
+    """Serializer for Establishment model with nested address."""
     
-    full_address = serializers.ReadOnlyField()
+    address = serializers.SerializerMethodField()
+    unitNumber = serializers.CharField(source='unit_number', read_only=True)
+    creationDate = serializers.DateField(source='creation_date', read_only=True)
     
     class Meta:
         model = Establishment
         fields = [
-            'id', 'unit_number', 'name', 'type', 'street', 'street_number',
-            'city', 'postal_code', 'country', 'phone', 'email',
-            'employees', 'creation_date', 'status', 'full_address',
-            'created_at', 'updated_at'
+            'id', 'unitNumber', 'name', 'address', 
+            'creationDate', 'status'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'full_address']
+        read_only_fields = ['id']
+    
+    def get_address(self, obj):
+        """Return address as a nested object."""
+        return {
+            'street': obj.street,
+            'streetNumber': obj.street_number,
+            'city': obj.city,
+            'postalCode': obj.postal_code,
+            'country': obj.country
+        }
 
 
 class FinancialDataSerializer(serializers.ModelSerializer):
