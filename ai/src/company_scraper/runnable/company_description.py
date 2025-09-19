@@ -146,7 +146,7 @@ class CompanyWebsiteExtractor:
             logging.info("find_websites : website data not found")
             return None
 
-        chain = Prompt.FIND_URL | LLM.GPT_4_TURBO
+        chain = Prompt.FIND_URL | LLM.GPT_4O_MINI
         best_url = chain.invoke(
             {
                 "name": self.company_schema.raw_data["name"],
