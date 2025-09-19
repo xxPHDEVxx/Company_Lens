@@ -8,9 +8,10 @@ const Login = () => {
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
   
-  const [email, setEmail] = useState('');
+  // Load saved email if exists
+  const [email, setEmail] = useState(() => localStorage.getItem('savedEmail') || '');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('savedEmail'));
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
 
@@ -47,9 +48,11 @@ const Login = () => {
       // Store the token
       localStorage.setItem('authToken', response.token);
       
-      // Store user info if remember me is checked
+      // Handle remember me
       if (rememberMe) {
-        localStorage.setItem('userEmail', email);
+        localStorage.setItem('savedEmail', email);
+      } else {
+        localStorage.removeItem('savedEmail');
       }
       
       // Navigate to the originally requested page or dashboard

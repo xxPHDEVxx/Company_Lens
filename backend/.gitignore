@@ -1,39 +1,22 @@
 # Python
-*.py[cod]
 __pycache__/
+*.py[cod]
+*$py.class
 *.so
-*.egg
-*.egg-info/
-dist/
-build/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual Environment
-venv/
-env/
-ENV/
-.venv
-.env
+*.pyc
 
 # Django
 *.log
-*.pot
-*.pyc
 db.sqlite3
 db.sqlite3-journal
 media/
 staticfiles/
-logs/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+ENV/
 
 # IDE
 .vscode/
@@ -41,41 +24,15 @@ logs/
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store
-
-# Testing
-.coverage
-.pytest_cache/
-htmlcov/
-.tox/
-.hypothesis/
-
-# Documentation
-docs/_build/
-database_schema.dbml
+Thumbs.db
 
 # Environment variables
 .env
 .env.local
-.env.*.local
 
-# Database
-*.sqlite3
-*.db
-
-# Temporary files
-*.tmp
-*.bak
-*.orig
-*~
-
-# OS files
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-*.cab
-*.msi
-*.msm
-*.msp
-*.lnk
+# Django migrations (optional - uncomment if you don't want to track migrations)
+# */migrations/*.py
+# !*/migrations/__init__.py
