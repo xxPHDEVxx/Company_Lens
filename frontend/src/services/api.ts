@@ -39,11 +39,22 @@ export const companyApi = {
   },
 
   getById: async (id: string): Promise<Company> => {
-    const response = await fetch(`${API_BASE_URL}/companies/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/companies/${id}/`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch company');
-    return response.json();
+    const data = await response.json();
+    
+    // Fetch establishments separately
+    const estResponse = await fetch(`${API_BASE_URL}/companies/${id}/establishments/`, {
+      headers: getAuthHeaders(),
+    });
+    const establishments = estResponse.ok ? await estResponse.json() : [];
+    
+    return {
+      ...data,
+      establishments: establishments,
+    };
   },
 
   search: async (filters: Partial<SearchFilters>): Promise<Company[]> => {

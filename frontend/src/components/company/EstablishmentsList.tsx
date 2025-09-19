@@ -5,7 +5,6 @@ interface Establishment {
   id: string;
   unitNumber: string;
   name: string;
-  type: 'headquarters' | 'branch' | 'production';
   address: {
     street: string;
     streetNumber: string;
@@ -15,9 +14,6 @@ interface Establishment {
   };
   creationDate: string;
   status: 'active' | 'inactive';
-  phone?: string;
-  email?: string;
-  employees?: number;
 }
 
 interface EstablishmentsListProps {
@@ -31,6 +27,12 @@ const EstablishmentsList: React.FC<EstablishmentsListProps> = ({ establishments 
       <h2 className="text-lg font-semibold text-gray-900 mb-4">
         Unités d'établissement ({establishments.length})
       </h2>
+      {establishments.length === 0 ? (
+        <div className="text-center py-8">
+          <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">Aucune unité d'établissement enregistrée</p>
+        </div>
+      ) : (
       <div className="space-y-4">
         {establishments.map((establishment) => (
           <div
@@ -39,9 +41,9 @@ const EstablishmentsList: React.FC<EstablishmentsListProps> = ({ establishments 
           >
             <div className="flex items-start justify-between mb-3">
               <div>
-                <h3 className="font-medium text-gray-900">{establishment.name}</h3>
+                <h3 className="font-medium text-gray-900">{establishment.name || 'Établissement'}</h3>
                 <p className="text-sm text-gray-600 mt-1">
-                  Unité n° {establishment.unitNumber}
+                  Unité n° {establishment.unitNumber || '-'}
                 </p>
               </div>
               <div className="flex items-center space-x-2">
@@ -60,11 +62,19 @@ const EstablishmentsList: React.FC<EstablishmentsListProps> = ({ establishments 
                 <div className="flex items-start">
                   <MapPin className="w-4 h-4 text-gray-400 mt-0.5 mr-2" />
                   <div>
-                    <p className="text-gray-900">{establishment.address.street} {establishment.address.streetNumber}</p>
-                    <p className="text-gray-600">
-                      {establishment.address.postalCode} {establishment.address.city}
-                    </p>
-                    <p className="text-gray-600">{establishment.address.country}</p>
+                    {establishment.address ? (
+                      <>
+                        <p className="text-gray-900">
+                          {establishment.address.street} {establishment.address.streetNumber}
+                        </p>
+                        <p className="text-gray-600">
+                          {establishment.address.postalCode} {establishment.address.city}
+                        </p>
+                        <p className="text-gray-600">{establishment.address.country}</p>
+                      </>
+                    ) : (
+                      <p className="text-gray-500">Adresse non disponible</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -73,7 +83,9 @@ const EstablishmentsList: React.FC<EstablishmentsListProps> = ({ establishments 
                 
                 <div className="flex items-center">
                   <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                  <span className="text-gray-600">Créé le {establishment.creationDate}</span>
+                  <span className="text-gray-600">
+                    {establishment.creationDate ? `Créé le ${establishment.creationDate}` : 'Date de création inconnue'}
+                  </span>
                 </div>
                 
               </div>
@@ -81,6 +93,7 @@ const EstablishmentsList: React.FC<EstablishmentsListProps> = ({ establishments 
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 };
