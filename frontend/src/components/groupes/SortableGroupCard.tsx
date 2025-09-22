@@ -27,13 +27,11 @@ function SortableGroupCard({ group, onDelete, onEdit, getGroupIcon }: SortableGr
     listeners,
     setNodeRef,
     transform,
-    transition,
     isDragging,
   } = useSortable({ id: group.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
   };
   
   const formatDate = (dateString: string) => {
@@ -68,7 +66,7 @@ function SortableGroupCard({ group, onDelete, onEdit, getGroupIcon }: SortableGr
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-200 ${
+      className={`bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg${
         isDragging ? 'opacity-50 shadow-2xl z-50' : ''
       }`}
     >
