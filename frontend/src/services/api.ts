@@ -9,9 +9,8 @@ import type {
   SearchFilters 
 } from '../types/api';
 import { config } from '../config/environment';
-import { mockGroupApi, mockCompanyApi } from './mockApi';
 
-const API_BASE_URL = config.USE_MOCK_API ? '' : (config.API_BASE_URL + '/api');
+const API_BASE_URL = config.API_BASE_URL + '/api';
 
 // Helper function to get auth headers
 const getAuthHeaders = (): HeadersInit => {
@@ -35,9 +34,6 @@ export const companyApi = {
   },
 
   getFollowed: async (): Promise<Company[]> => {
-    if (config.USE_MOCK_API) {
-      return mockCompanyApi.getFollowed();
-    }
     const response = await fetch(`${API_BASE_URL}/companies/followed`, {
       headers: getAuthHeaders(),
     });
@@ -126,8 +122,8 @@ export const companyApi = {
   },
 };
 
-// Group APIs - Use mock API when configured
-export const groupApi = config.USE_MOCK_API ? mockGroupApi : {
+// Group APIs
+export const groupApi = {
   getAll: async (): Promise<CompanyGroup[]> => {
     const response = await fetch(`${API_BASE_URL}/groups/`, {
       headers: getAuthHeaders(),
