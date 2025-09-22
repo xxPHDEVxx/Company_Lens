@@ -234,11 +234,6 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
       <div className="flex justify-between items-center">
         <div className="text-gray-600">
           <span className="font-medium">{sortedCompanies.length}</span> entreprise{sortedCompanies.length !== 1 ? 's' : ''} dans ce groupe
-          {sortedCompanies.length > 1 && (
-            <span className="ml-2 text-sm text-gray-500">
-              (Glissez l'icône ⋮⋮ pour réorganiser)
-            </span>
-          )}
         </div>
         <button
           onClick={() => setShowAddModal(true)}

@@ -79,31 +79,6 @@ class CompanyGroup(models.Model):
     def companies_count(self):
         """Get the number of companies in this group."""
         return self.companies.count()
-    
-    def add_companies(self, company_ids):
-        """Add multiple companies to the group."""
-        # Get the highest position in the group
-        max_position = self.groupmembership_set.aggregate(
-            max_pos=models.Max('position')
-        )['max_pos'] or -1
-        
-        for i, company_id in enumerate(company_ids):
-            try:
-                company = Company.objects.get(id=company_id)
-                GroupMembership.objects.get_or_create(
-                    group=self,
-                    company=company,
-                    defaults={'position': max_position + i + 1}
-                )
-            except Company.DoesNotExist:
-                continue
-    
-    def remove_company(self, company_id):
-        """Remove a company from the group."""
-        GroupMembership.objects.filter(
-            group=self,
-            company_id=company_id
-        ).delete()
 
 
 class GroupMembership(models.Model):

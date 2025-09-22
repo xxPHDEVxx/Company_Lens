@@ -89,8 +89,3 @@ class GroupMembershipInline(admin.TabularInline):
 class CompanyGroupWithMembersAdmin(CompanyGroupAdmin):
     """Extended admin for CompanyGroup with inline members."""
     inlines = [GroupMembershipInline]
-
-
-# You can uncomment this to use the version with inline members instead
-# admin.site.unregister(CompanyGroup)
-# admin.site.register(CompanyGroup, CompanyGroupWithMembersAdmin)

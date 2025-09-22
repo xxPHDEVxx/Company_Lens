@@ -6,27 +6,12 @@ Models for tracking user search history.
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
-import random
 
 User = get_user_model()
 
 
 class RecentSearch(models.Model):
     """Model for tracking recent searches by users."""
-    
-    # Color choices for search items (for UI display)
-    COLOR_CHOICES = [
-        ('#FF6B6B', 'Red'),
-        ('#4ECDC4', 'Teal'),
-        ('#45B7D1', 'Blue'),
-        ('#96CEB4', 'Green'),
-        ('#FECA57', 'Yellow'),
-        ('#FF9FF3', 'Pink'),
-        ('#54A0FF', 'Light Blue'),
-        ('#48DBFB', 'Sky Blue'),
-        ('#FF6348', 'Orange'),
-        ('#A29BFE', 'Purple'),
-    ]
     
     # Relations
     user = models.ForeignKey(
@@ -52,13 +37,6 @@ class RecentSearch(models.Model):
         max_length=50,
         blank=True,
         help_text=_('ID of the company for navigation')
-    )
-    
-    # UI elements
-    color = models.CharField(
-        _('color'),
-        max_length=7,
-        help_text=_('Hex color code for display')
     )
     
     # Search metadata
@@ -97,12 +75,6 @@ class RecentSearch(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.user.email}"
-    
-    def save(self, *args, **kwargs):
-        """Override save to auto-assign color if not set."""
-        if not self.color:
-            self.color = random.choice([c[0] for c in self.COLOR_CHOICES])
-        super().save(*args, **kwargs)
     
     @property
     def time(self):
