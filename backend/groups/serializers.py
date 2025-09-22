@@ -175,9 +175,6 @@ class RemoveCompanyFromGroupSerializer(serializers.Serializer):
         return value
 
 
-# Sharing serializers removed - groups are private to their creators
-
-
 class GroupStatisticsSerializer(serializers.Serializer):
     """Serializer for group statistics."""
     

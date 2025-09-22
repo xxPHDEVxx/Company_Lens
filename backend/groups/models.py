@@ -147,6 +147,3 @@ class GroupMembership(models.Model):
     
     def __str__(self):
         return f"{self.company.name} in {self.group.name}"
-
-
-# SharedGroup model removed - groups are private to their creators

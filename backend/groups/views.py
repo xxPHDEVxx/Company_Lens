@@ -279,6 +279,3 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
     def _is_group_owner(self, user, group):
         """Check if user owns the group."""
         return group.owner == user
-
-
-# SharedGroupViewSet removed - groups are private to their creators
