@@ -8,8 +8,10 @@ import type {
   AuthResponse,
   SearchFilters 
 } from '../types/api';
+import { config } from '../config/environment';
+import { mockGroupApi, mockCompanyApi } from './mockApi';
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = config.USE_MOCK_API ? '' : (config.API_BASE_URL + '/api');
 
 // Helper function to get auth headers
 const getAuthHeaders = (): HeadersInit => {
@@ -27,15 +29,22 @@ export const companyApi = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch companies');
-    return response.json();
+    const data = await response.json();
+    // Handle paginated response - extract results array
+    return data.results || data;
   },
 
   getFollowed: async (): Promise<Company[]> => {
+    if (config.USE_MOCK_API) {
+      return mockCompanyApi.getFollowed();
+    }
     const response = await fetch(`${API_BASE_URL}/companies/followed`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch followed companies');
-    return response.json();
+    const data = await response.json();
+    // Handle paginated response - extract results array
+    return data.results || data;
   },
 
   getById: async (id: string): Promise<Company> => {
@@ -67,7 +76,9 @@ export const companyApi = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to search companies');
-    return response.json();
+    const data = await response.json();
+    // Handle paginated response - extract results array
+    return data.results || data;
   },
 
   create: async (company: Partial<Company>): Promise<Company> => {
@@ -115,75 +126,151 @@ export const companyApi = {
   },
 };
 
-// Group APIs
-export const groupApi = {
+// Group APIs - Use mock API when configured
+export const groupApi = config.USE_MOCK_API ? mockGroupApi : {
   getAll: async (): Promise<CompanyGroup[]> => {
-    const response = await fetch(`${API_BASE_URL}/groups`, {
+    const response = await fetch(`${API_BASE_URL}/groups/`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch groups');
-    return response.json();
+    const data = await response.json();
+    // Handle paginated response - extract results array
+    const groups = data.results || data;
+    // Transform snake_case to camelCase for each group
+    return groups.map((group: any) => ({
+      ...group,
+      companiesCount: group.companies_count || 0,
+      createdAt: group.created_at,
+      updatedAt: group.updated_at || group.created_at,
+    }));
   },
 
   getById: async (id: string): Promise<CompanyGroup> => {
-    const response = await fetch(`${API_BASE_URL}/groups/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/groups/${id}/`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch group');
-    return response.json();
+    const data = await response.json();
+    // Transform snake_case to camelCase
+    return {
+      ...data,
+      companiesCount: data.companies_count || 0,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at || data.created_at,
+    };
   },
 
   create: async (group: Partial<CompanyGroup>): Promise<CompanyGroup> => {
-    const response = await fetch(`${API_BASE_URL}/groups`, {
+    const response = await fetch(`${API_BASE_URL}/groups/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(group),
     });
-    if (!response.ok) throw new Error('Failed to create group');
-    return response.json();
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      const error = new Error('Failed to create group') as any;
+      error.response = { data: errorData };
+      throw error;
+    }
+    const data = await response.json();
+    // Transform snake_case to camelCase
+    return {
+      ...data,
+      companiesCount: data.companies_count || 0,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at || data.created_at,
+    };
   },
 
   update: async (id: string, updates: Partial<CompanyGroup>): Promise<CompanyGroup> => {
-    const response = await fetch(`${API_BASE_URL}/groups/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/groups/${id}/`, {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify(updates),
     });
-    if (!response.ok) throw new Error('Failed to update group');
-    return response.json();
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      const error = new Error('Failed to update group') as any;
+      error.response = { data: errorData };
+      throw error;
+    }
+    const data = await response.json();
+    // Transform snake_case to camelCase
+    return {
+      ...data,
+      companiesCount: data.companies_count || 0,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at || data.created_at,
+    };
   },
 
   delete: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/groups/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/groups/${id}/`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to delete group');
   },
 
+  updateGroupPositions: async (groupIds: string[]): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/groups/update_positions/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ group_ids: groupIds }),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to update group positions' }));
+      throw new Error(error.message || 'Failed to update group positions');
+    }
+  },
+
   getCompanies: async (groupId: string): Promise<Company[]> => {
-    const response = await fetch(`${API_BASE_URL}/groups/${groupId}/companies`, {
+    const response = await fetch(`${API_BASE_URL}/groups/${groupId}/companies/`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch group companies');
-    return response.json();
+    const data = await response.json();
+    // The backend returns membership objects with nested companies
+    // Extract the company objects from the membership data
+    const memberships = data.results || data;
+    return memberships.map((membership: any) => membership.company);
   },
 
   addCompanies: async (groupId: string, companyIds: string[]): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/groups/${groupId}/companies`, {
+    const response = await fetch(`${API_BASE_URL}/groups/${groupId}/add_companies/`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify({ companyIds }),
+      body: JSON.stringify({ company_ids: companyIds }), // Changed to match Django API
     });
-    if (!response.ok) throw new Error('Failed to add companies to group');
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to add companies to group' }));
+      throw new Error(error.message || 'Failed to add companies to group');
+    }
+    return response.json();
   },
 
   removeCompany: async (groupId: string, companyId: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/groups/${groupId}/companies/${companyId}`, {
-      method: 'DELETE',
+    const response = await fetch(`${API_BASE_URL}/groups/${groupId}/remove_company/`, {
+      method: 'POST',
       headers: getAuthHeaders(),
+      body: JSON.stringify({ company_id: companyId }), // Backend expects company_id in body
     });
-    if (!response.ok) throw new Error('Failed to remove company from group');
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to remove company from group' }));
+      throw new Error(error.message || 'Failed to remove company from group');
+    }
+  },
+
+  updatePositions: async (groupId: string, companyIds: string[]): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/groups/${groupId}/update_positions/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ company_ids: companyIds }),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Failed to update positions' }));
+      throw new Error(error.message || 'Failed to update positions');
+    }
   },
 };
 
@@ -197,8 +284,8 @@ export const recentSearchApi = {
     return response.json();
   },
 
-  add: async (search: { name: string; vat: string }): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/recent-searches`, {
+  add: async (search: { name: string; vat: string; company_id: string }): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/recent-searches/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(search),
@@ -207,7 +294,7 @@ export const recentSearchApi = {
   },
 
   clear: async (): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/recent-searches`, {
+    const response = await fetch(`${API_BASE_URL}/recent-searches/clear/`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
@@ -253,7 +340,7 @@ export const authApi = {
   },
 
   logout: async (): Promise<void> => {
-    await fetch(`${API_BASE_URL}/auth/logout`, {
+    await fetch(`${API_BASE_URL}/auth/logout/`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
