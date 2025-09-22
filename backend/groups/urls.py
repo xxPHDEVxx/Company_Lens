@@ -12,7 +12,7 @@ app_name = 'groups'
 # Create router and register ViewSets
 router = DefaultRouter()
 router.register(r'groups', views.CompanyGroupViewSet, basename='group')
-router.register(r'shared', views.SharedGroupViewSet, basename='shared')
+# Sharing removed - groups are private to their creators
 
 # URL patterns
 urlpatterns = [
@@ -22,24 +22,15 @@ urlpatterns = [
 
 # The router automatically creates these URLs:
 # groups/
-#   - GET: list groups
+#   - GET: list groups (private to user)
 #   - POST: create group
 # groups/{id}/
-#   - GET: retrieve group
-#   - PUT: update group
-#   - PATCH: partial update
-#   - DELETE: delete group
+#   - GET: retrieve group (if owner)
+#   - PUT: update group (if owner)
+#   - PATCH: partial update (if owner)
+#   - DELETE: delete group (if owner)
 # groups/{id}/add_companies/ (custom action)
 # groups/{id}/remove_company/ (custom action)
-# groups/{id}/share/ (custom action)
-# groups/{id}/unshare/ (custom action)
 # groups/{id}/companies/ (custom action)
 # groups/my_groups/ (custom action)
-# groups/shared_with_me/ (custom action)
-# groups/public/ (custom action)
 # groups/statistics/ (custom action)
-#
-# shared/
-#   - GET: list shared groups (read-only)
-# shared/{id}/
-#   - GET: retrieve shared group details (read-only)

@@ -9,15 +9,13 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count, Q
 from django.utils.translation import gettext_lazy as _
-from .models import CompanyGroup, GroupMembership, SharedGroup
+from .models import CompanyGroup, GroupMembership
 from .serializers import (
     CompanyGroupListSerializer,
     CompanyGroupDetailSerializer,
     CompanyGroupCreateUpdateSerializer,
     AddCompaniesToGroupSerializer,
     RemoveCompanyFromGroupSerializer,
-    SharedGroupSerializer,
-    ShareGroupSerializer,
     GroupStatisticsSerializer
 )
 
@@ -31,26 +29,11 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        """Get groups owned by or shared with the current user."""
+        """Get groups owned by the current user."""
         user = self.request.user
         
-        # Get groups owned by user
-        owned_groups = CompanyGroup.objects.filter(owner=user)
-        
-        # Get groups shared with user
-        shared_group_ids = SharedGroup.objects.filter(
-            shared_with=user
-        ).values_list('group_id', flat=True)
-        
-        # Combine queries
-        queryset = CompanyGroup.objects.filter(
-            Q(owner=user) | Q(id__in=shared_group_ids)
-        ).distinct()
-        
-        # Filter by public groups if requested
-        show_public = self.request.query_params.get('show_public', 'false').lower() == 'true'
-        if show_public:
-            queryset = queryset | CompanyGroup.objects.filter(is_public=True)
+        # Get only groups owned by user (groups are private)
+        queryset = CompanyGroup.objects.filter(owner=user)
         
         # Annotate with companies count
         queryset = queryset.annotate(
@@ -61,11 +44,10 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             queryset = queryset.prefetch_related(
                 'companies',
-                'groupmembership_set__company',
-                'shares__shared_with'
+                'groupmembership_set__company'
             )
         
-        return queryset.order_by('name')
+        return queryset.order_by('position', 'name')
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action."""
@@ -79,15 +61,21 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
             return AddCompaniesToGroupSerializer
         elif self.action == 'remove_company':
             return RemoveCompanyFromGroupSerializer
-        elif self.action == 'share':
-            return ShareGroupSerializer
         elif self.action == 'statistics':
             return GroupStatisticsSerializer
         return CompanyGroupDetailSerializer
     
     def perform_create(self, serializer):
         """Set the owner to the current user when creating a group."""
-        serializer.save(owner=self.request.user)
+        from django.db.models import Max
+        user = self.request.user
+        
+        # Get the next available position
+        max_position = CompanyGroup.objects.filter(
+            owner=user
+        ).aggregate(max_pos=Max('position'))['max_pos'] or -1
+        
+        serializer.save(owner=user, position=max_position + 1)
     
     def destroy(self, request, *args, **kwargs):
         """Only allow group owner to delete the group."""
@@ -107,7 +95,7 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
         group = self.get_object()
         
         # Check permissions
-        if not self._can_edit_group(request.user, group):
+        if not self._is_group_owner(request.user, group):
             return Response(
                 {'message': _('You do not have permission to edit this group.')},
                 status=status.HTTP_403_FORBIDDEN
@@ -125,7 +113,43 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
             'added_count': result['added_count']
         }, status=status.HTTP_200_OK)
     
-    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated],
+            url_path='update_positions')
+    def update_positions(self, request, pk=None):
+        """
+        Update the positions of companies in a group after drag and drop.
+        Expects a list of company_ids in the new order.
+        """
+        group = self.get_object()
+        
+        # Check permissions
+        if not self._is_group_owner(request.user, group):
+            return Response(
+                {'message': _('You do not have permission to edit this group.')},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        company_ids = request.data.get('company_ids', [])
+        if not company_ids:
+            return Response(
+                {'message': _('No company IDs provided.')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update positions based on the new order
+        for position, company_id in enumerate(company_ids):
+            GroupMembership.objects.filter(
+                group=group,
+                company_id=company_id
+            ).update(position=position)
+        
+        return Response(
+            {'message': _('Positions updated successfully.')},
+            status=status.HTTP_200_OK
+        )
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated], 
+            url_path='remove_company')
     def remove_company(self, request, pk=None):
         """
         Remove a company from a group.
@@ -133,7 +157,7 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
         group = self.get_object()
         
         # Check permissions
-        if not self._can_edit_group(request.user, group):
+        if not self._is_group_owner(request.user, group):
             return Response(
                 {'message': _('You do not have permission to edit this group.')},
                 status=status.HTTP_403_FORBIDDEN
@@ -156,68 +180,7 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
     
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
-    def share(self, request, pk=None):
-        """
-        Share a group with other users.
-        """
-        group = self.get_object()
-        
-        # Only owner can share the group
-        if group.owner != request.user:
-            return Response(
-                {'message': _('Only the group owner can share this group.')},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        serializer = ShareGroupSerializer(
-            data=request.data,
-            context={'request': request, 'group': group}
-        )
-        serializer.is_valid(raise_exception=True)
-        result = serializer.save()
-        
-        return Response({
-            'message': _('Group shared successfully.'),
-            'shared_count': result['shared_count']
-        }, status=status.HTTP_200_OK)
-    
-    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
-    def unshare(self, request, pk=None):
-        """
-        Remove sharing for specific users.
-        """
-        group = self.get_object()
-        
-        # Only owner can unshare
-        if group.owner != request.user:
-            return Response(
-                {'message': _('Only the group owner can manage sharing.')},
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        user_id = request.data.get('user_id')
-        if not user_id:
-            return Response(
-                {'message': _('User ID is required.')},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        deleted_count = SharedGroup.objects.filter(
-            group=group,
-            shared_with_id=user_id
-        ).delete()[0]
-        
-        if deleted_count:
-            return Response(
-                {'message': _('Sharing removed successfully.')},
-                status=status.HTTP_200_OK
-            )
-        else:
-            return Response(
-                {'message': _('This group is not shared with the specified user.')},
-                status=status.HTTP_404_NOT_FOUND
-            )
+    # Sharing actions removed - groups are private to their creators
     
     @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
     def companies(self, request, pk=None):
@@ -227,7 +190,7 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
         group = self.get_object()
         
         # Check if user has access to view the group
-        if not self._can_view_group(request.user, group):
+        if not self._is_group_owner(request.user, group):
             return Response(
                 {'message': _('You do not have permission to view this group.')},
                 status=status.HTTP_403_FORBIDDEN
@@ -241,52 +204,34 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
         serializer = GroupMembershipSerializer(memberships, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
-    def my_groups(self, request):
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated],
+            url_path='update_positions')
+    def update_group_positions(self, request):
         """
-        Get only groups owned by the current user.
+        Update the positions of groups after drag and drop.
+        Expects a list of group_ids in the new order.
         """
-        groups = CompanyGroup.objects.filter(
-            owner=request.user
-        ).annotate(
-            companies_count_annotated=Count('companies')
-        ).order_by('name')
+        user = request.user
+        group_ids = request.data.get('group_ids', [])
         
-        serializer = CompanyGroupListSerializer(groups, many=True)
-        return Response(serializer.data)
+        if not group_ids:
+            return Response(
+                {'message': _('No group IDs provided.')},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update positions based on the new order
+        for position, group_id in enumerate(group_ids):
+            CompanyGroup.objects.filter(
+                owner=user,
+                id=group_id
+            ).update(position=position)
+        
+        return Response(
+            {'message': _('Group positions updated successfully.')},
+            status=status.HTTP_200_OK
+        )
     
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
-    def shared_with_me(self, request):
-        """
-        Get groups shared with the current user.
-        """
-        shared = SharedGroup.objects.filter(
-            shared_with=request.user
-        ).select_related('group', 'group__owner', 'shared_by')
-        
-        groups = []
-        for share in shared:
-            group_data = CompanyGroupListSerializer(share.group).data
-            group_data['permission'] = share.permission
-            group_data['shared_by'] = share.shared_by.name
-            group_data['shared_at'] = share.shared_at
-            groups.append(group_data)
-        
-        return Response(groups)
-    
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
-    def public(self, request):
-        """
-        Get all public groups.
-        """
-        groups = CompanyGroup.objects.filter(
-            is_public=True
-        ).annotate(
-            companies_count_annotated=Count('companies')
-        ).order_by('-companies_count_annotated', 'name')[:50]
-        
-        serializer = CompanyGroupListSerializer(groups, many=True)
-        return Response(serializer.data)
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def statistics(self, request):
@@ -303,16 +248,7 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
             group__owner=user
         ).values('company').distinct().count()
         
-        # Shared groups
-        shared_groups = SharedGroup.objects.filter(
-            group__owner=user
-        ).values('group').distinct().count()
         
-        # Public groups
-        public_groups = CompanyGroup.objects.filter(
-            owner=user,
-            is_public=True
-        ).count()
         
         # Groups by icon
         groups_by_icon = dict(
@@ -333,8 +269,6 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
         data = {
             'total_groups': total_groups,
             'total_companies': total_companies,
-            'shared_groups': shared_groups,
-            'public_groups': public_groups,
             'groups_by_icon': groups_by_icon,
             'average_group_size': avg_group_size
         }
@@ -342,52 +276,9 @@ class CompanyGroupViewSet(viewsets.ModelViewSet):
         serializer = GroupStatisticsSerializer(data)
         return Response(serializer.data)
     
-    def _can_view_group(self, user, group):
-        """Check if user can view a group."""
-        # Owner can always view
-        if group.owner == user:
-            return True
-        
-        # Check if group is public
-        if group.is_public:
-            return True
-        
-        # Check if group is shared with user
-        return SharedGroup.objects.filter(
-            group=group,
-            shared_with=user
-        ).exists()
-    
-    def _can_edit_group(self, user, group):
-        """Check if user can edit a group."""
-        # Owner can always edit
-        if group.owner == user:
-            return True
-        
-        # Check if user has edit or admin permission
-        try:
-            share = SharedGroup.objects.get(group=group, shared_with=user)
-            return share.permission in ['edit', 'admin']
-        except SharedGroup.DoesNotExist:
-            return False
+    def _is_group_owner(self, user, group):
+        """Check if user owns the group."""
+        return group.owner == user
 
 
-class SharedGroupViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    ViewSet for viewing shared group relationships.
-    Read-only access to see who groups are shared with.
-    """
-    
-    serializer_class = SharedGroupSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        """Get shares for groups owned by or shared with the current user."""
-        user = self.request.user
-        
-        # Get shares for groups owned by user or shared with user
-        return SharedGroup.objects.filter(
-            Q(group__owner=user) | Q(shared_with=user)
-        ).select_related(
-            'group', 'shared_with', 'shared_by'
-        ).order_by('-shared_at')
+# SharedGroupViewSet removed - groups are private to their creators

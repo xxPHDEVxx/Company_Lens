@@ -6,7 +6,7 @@ Handles serialization/deserialization of company groups and sharing.
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
-from .models import CompanyGroup, GroupMembership, SharedGroup
+from .models import CompanyGroup, GroupMembership
 from companies.models import Company
 from companies.serializers import CompanyListSerializer
 
@@ -23,8 +23,8 @@ class GroupMembershipSerializer(serializers.ModelSerializer):
     class Meta:
         model = GroupMembership
         fields = [
-            'id', 'company', 'company_id', 'added_at', 'added_by',
-            'added_by_name', 'notes', 'position'
+            'id', 'company', 'company_id', 'position', 'added_at', 'added_by',
+            'added_by_name'
         ]
         read_only_fields = ['id', 'added_at', 'added_by', 'added_by_name']
 
@@ -34,19 +34,14 @@ class CompanyGroupListSerializer(serializers.ModelSerializer):
     
     companies_count = serializers.ReadOnlyField()
     owner_name = serializers.CharField(source='owner.name', read_only=True)
-    is_shared = serializers.SerializerMethodField()
     
     class Meta:
         model = CompanyGroup
         fields = [
-            'id', 'name', 'description', 'icon', 'color', 'is_public',
-            'companies_count', 'owner_name', 'is_shared', 'created_at'
+            'id', 'name', 'description', 'icon', 'position',
+            'companies_count', 'owner_name', 'created_at'
         ]
-        read_only_fields = ['id', 'companies_count', 'owner_name', 'is_shared', 'created_at']
-    
-    def get_is_shared(self, obj):
-        """Check if group is shared with anyone."""
-        return obj.shares.exists()
+        read_only_fields = ['id', 'position', 'companies_count', 'owner_name', 'created_at']
 
 
 class CompanyGroupDetailSerializer(serializers.ModelSerializer):
@@ -58,33 +53,19 @@ class CompanyGroupDetailSerializer(serializers.ModelSerializer):
     memberships = GroupMembershipSerializer(
         source='groupmembership_set', many=True, read_only=True
     )
-    shared_with = serializers.SerializerMethodField()
     
     class Meta:
         model = CompanyGroup
         fields = [
-            'id', 'name', 'description', 'icon', 'color', 'is_public',
+            'id', 'name', 'description', 'icon', 'position',
             'companies_count', 'owner', 'owner_name', 'owner_email',
-            'memberships', 'shared_with', 'created_at', 'updated_at'
+            'memberships', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'companies_count', 'owner', 'owner_name', 'owner_email',
-            'shared_with', 'created_at', 'updated_at'
+            'id', 'position', 'companies_count', 'owner', 'owner_name', 'owner_email',
+            'created_at', 'updated_at'
         ]
     
-    def get_shared_with(self, obj):
-        """Get list of users this group is shared with."""
-        shares = obj.shares.select_related('shared_with')
-        return [
-            {
-                'user_id': share.shared_with.id,
-                'user_name': share.shared_with.name,
-                'user_email': share.shared_with.email,
-                'permission': share.permission,
-                'shared_at': share.shared_at
-            }
-            for share in shares
-        ]
 
 
 class CompanyGroupCreateUpdateSerializer(serializers.ModelSerializer):
@@ -92,7 +73,7 @@ class CompanyGroupCreateUpdateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = CompanyGroup
-        fields = ['id', 'name', 'description', 'icon', 'color', 'is_public']
+        fields = ['id', 'name', 'description', 'icon']
         read_only_fields = ['id']
         extra_kwargs = {
             'name': {'required': True},
@@ -112,27 +93,10 @@ class CompanyGroupCreateUpdateSerializer(serializers.ModelSerializer):
         
         if queryset.exists():
             raise serializers.ValidationError(
-                _('You already have a group with this name.')
+                'Vous avez déjà un groupe avec ce nom.'
             )
         
         return value
-    
-    def validate_color(self, value):
-        """Validate color is a valid hex code."""
-        if value and not value.startswith('#'):
-            value = f'#{value}'
-        
-        if value and len(value) not in [4, 7]:  # #RGB or #RRGGBB
-            raise serializers.ValidationError(
-                _('Color must be a valid hex code (e.g., #FF5733)')
-            )
-        
-        return value
-    
-    def create(self, validated_data):
-        """Create a new group for the current user."""
-        user = self.context['request'].user
-        return CompanyGroup.objects.create(owner=user, **validated_data)
 
 
 class AddCompaniesToGroupSerializer(serializers.Serializer):
@@ -143,11 +107,6 @@ class AddCompaniesToGroupSerializer(serializers.Serializer):
         required=True,
         allow_empty=False,
         help_text=_('List of company IDs to add to the group')
-    )
-    notes = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        help_text=_('Notes about why these companies were added')
     )
     
     def validate_company_ids(self, value):
@@ -171,17 +130,22 @@ class AddCompaniesToGroupSerializer(serializers.Serializer):
         group = self.context['group']
         user = self.context['request'].user
         company_ids = validated_data['company_ids']
-        notes = validated_data.get('notes', '')
+        
+        # Get the current max position in the group
+        from django.db.models import Max
+        max_position = group.groupmembership_set.aggregate(
+            max_pos=Max('position')
+        )['max_pos'] or -1
         
         memberships = []
-        for company_id in company_ids:
+        for i, company_id in enumerate(company_ids):
             company = Company.objects.get(id=company_id)
             membership, created = GroupMembership.objects.get_or_create(
                 group=group,
                 company=company,
                 defaults={
                     'added_by': user,
-                    'notes': notes
+                    'position': max_position + i + 1
                 }
             )
             if created:
@@ -211,90 +175,7 @@ class RemoveCompanyFromGroupSerializer(serializers.Serializer):
         return value
 
 
-class SharedGroupSerializer(serializers.ModelSerializer):
-    """Serializer for sharing groups with users."""
-    
-    group_name = serializers.CharField(source='group.name', read_only=True)
-    shared_with_name = serializers.CharField(source='shared_with.name', read_only=True)
-    shared_with_email = serializers.CharField(source='shared_with.email', read_only=True)
-    shared_by_name = serializers.CharField(source='shared_by.name', read_only=True)
-    
-    class Meta:
-        model = SharedGroup
-        fields = [
-            'id', 'group', 'group_name', 'shared_with', 'shared_with_name',
-            'shared_with_email', 'shared_by', 'shared_by_name', 'permission',
-            'notify_changes', 'shared_at'
-        ]
-        read_only_fields = [
-            'id', 'group_name', 'shared_with_name', 'shared_with_email',
-            'shared_by', 'shared_by_name', 'shared_at'
-        ]
-
-
-class ShareGroupSerializer(serializers.Serializer):
-    """Serializer for sharing a group with users."""
-    
-    user_emails = serializers.ListField(
-        child=serializers.EmailField(),
-        required=True,
-        allow_empty=False,
-        help_text=_('List of user emails to share the group with')
-    )
-    permission = serializers.ChoiceField(
-        choices=SharedGroup.PERMISSION_CHOICES,
-        default='view',
-        help_text=_('Permission level for shared users')
-    )
-    notify_changes = serializers.BooleanField(
-        default=True,
-        help_text=_('Notify users when the group is modified')
-    )
-    
-    def validate_user_emails(self, value):
-        """Validate all emails belong to existing users."""
-        invalid_emails = []
-        for email in value:
-            if not User.objects.filter(email=email.lower()).exists():
-                invalid_emails.append(email)
-        
-        if invalid_emails:
-            raise serializers.ValidationError(
-                _('The following users do not exist: %(emails)s') % {
-                    'emails': ', '.join(invalid_emails)
-                }
-            )
-        
-        return [email.lower() for email in value]
-    
-    def create(self, validated_data):
-        """Share the group with specified users."""
-        group = self.context['group']
-        shared_by = self.context['request'].user
-        user_emails = validated_data['user_emails']
-        permission = validated_data['permission']
-        notify_changes = validated_data['notify_changes']
-        
-        shares = []
-        for email in user_emails:
-            user = User.objects.get(email=email)
-            
-            # Skip if sharing with owner
-            if user == group.owner:
-                continue
-            
-            share, created = SharedGroup.objects.update_or_create(
-                group=group,
-                shared_with=user,
-                defaults={
-                    'shared_by': shared_by,
-                    'permission': permission,
-                    'notify_changes': notify_changes
-                }
-            )
-            shares.append(share)
-        
-        return {'shared_count': len(shares), 'shares': shares}
+# Sharing serializers removed - groups are private to their creators
 
 
 class GroupStatisticsSerializer(serializers.Serializer):
@@ -302,7 +183,5 @@ class GroupStatisticsSerializer(serializers.Serializer):
     
     total_groups = serializers.IntegerField()
     total_companies = serializers.IntegerField()
-    shared_groups = serializers.IntegerField()
-    public_groups = serializers.IntegerField()
     groups_by_icon = serializers.DictField()
     average_group_size = serializers.FloatField()
