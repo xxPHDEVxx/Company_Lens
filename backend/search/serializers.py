@@ -11,8 +11,8 @@ class RecentSearchSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = RecentSearch
-        fields = ['id', 'name', 'vat', 'company_id', 'color', 'query', 'filters', 'searched_at', 'time']
-        read_only_fields = ['id', 'searched_at', 'time', 'color']
+        fields = ['id', 'name', 'vat', 'company_id', 'query', 'filters', 'searched_at', 'time']
+        read_only_fields = ['id', 'searched_at', 'time']
     
     def validate(self, attrs):
         """Ensure we have at least name and VAT."""
