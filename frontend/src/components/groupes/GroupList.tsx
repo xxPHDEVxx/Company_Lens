@@ -120,11 +120,6 @@ const GroupList: React.FC<GroupListProps> = ({
 
   return (
     <div>
-      {sortedGroups.length > 1 && (
-        <div className="mb-4 text-sm text-gray-500 text-right">
-          Glissez l'icône ⋮⋮ pour réorganiser les groupes
-        </div>
-      )}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
