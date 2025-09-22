@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Download, Share2, Star } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import GroupHeader from '../components/groupes/GroupHeader';
 import GroupOverview from '../components/groupes/GroupOverview';
 import GroupCompaniesView from '../components/groupes/GroupCompaniesView';
 import GroupStatistics from '../components/groupes/GroupStatistics';
 import { getGroupIcon } from '../components/groupes';
-import { useGroup, useGroupCompanies, useFollowedCompanies, useRemoveCompanyFromGroup, useAddCompaniesToGroup } from '../hooks/queries';
+import { useGroup, useGroupCompanies, useCompanies, useRemoveCompanyFromGroup, useAddCompaniesToGroup } from '../hooks/queries';
+import { queryKeys } from '../lib/queryClient';
 
 const GroupDetails = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   
   const [activeTab, setActiveTab] = useState('overview');
   
@@ -20,9 +23,9 @@ const GroupDetails = () => {
   const sourceRoute = location.state?.route || '/groupes';
 
   // Use React Query hooks
-  const { data: group, isLoading: groupLoading, error: groupError } = useGroup(groupId);
-  const { data: companies = [], isLoading: companiesLoading } = useGroupCompanies(groupId);
-  const { data: followedCompanies = [] } = useFollowedCompanies();
+  const { data: group, isLoading: groupLoading, error: groupError, refetch: refetchGroup } = useGroup(groupId);
+  const { data: companies = [], isLoading: companiesLoading, refetch: refetchCompanies } = useGroupCompanies(groupId);
+  const { data: allCompanies = [] } = useCompanies();  // Fetch ALL companies for the modal
   const removeCompanyMutation = useRemoveCompanyFromGroup();
   const addCompaniesMutation = useAddCompaniesToGroup();
 
@@ -30,19 +33,19 @@ const GroupDetails = () => {
   const error = groupError;
 
   const handleDeleteCompanyFromGroup = async (groupId: string, companyId: string) => {
-    try {
-      await removeCompanyMutation.mutateAsync({ groupId, companyId });
-    } catch (err) {
-      alert('Erreur lors de la suppression de l\'entreprise du groupe');
-    }
+    // Let it throw - the child component will handle the error display
+    await removeCompanyMutation.mutateAsync({ groupId, companyId });
+    // Manually refetch to ensure UI updates
+    await refetchCompanies();
+    await refetchGroup();
   };
 
   const handleAddCompaniesToGroup = async (groupId: string, companyIds: string[]) => {
-    try {
-      await addCompaniesMutation.mutateAsync({ groupId, companyIds });
-    } catch (err) {
-      alert('Erreur lors de l\'ajout des entreprises au groupe');
-    }
+    // Let it throw - the child component will handle the error display
+    await addCompaniesMutation.mutateAsync({ groupId, companyIds });
+    // Manually refetch to ensure UI updates
+    await refetchCompanies();
+    await refetchGroup();
   };
 
   const tabs = [
@@ -153,7 +156,8 @@ const GroupDetails = () => {
         <GroupHeader 
           group={{
             ...group,
-            updatedAt: group.createdAt // Using createdAt as updatedAt until backend provides it
+            companiesCount: companies.length, // Use actual companies array length for accurate count
+            updatedAt: group.updatedAt || group.createdAt
           }} 
           getGroupIcon={getGroupIcon} 
         />
@@ -189,7 +193,7 @@ const GroupDetails = () => {
             <GroupCompaniesView
               group={group}
               companies={companies}
-              followedCompanies={followedCompanies}
+              availableCompanies={allCompanies}
               onBack={() => navigate('/groupes')}
               onDeleteCompany={handleDeleteCompanyFromGroup}
               onAddCompanies={handleAddCompaniesToGroup}

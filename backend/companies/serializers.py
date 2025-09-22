@@ -1,0 +1,221 @@
+"""
+Company serializers for Company Lens API.
+Handles serialization/deserialization of company data, establishments, and financial information.
+"""
+
+from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
+from .models import Company, Establishment, FinancialData, CompanyFollower
+
+
+class EstablishmentSerializer(serializers.ModelSerializer):
+    """Serializer for Establishment model with nested address."""
+    
+    address = serializers.SerializerMethodField()
+    unitNumber = serializers.CharField(source='unit_number', read_only=True)
+    creationDate = serializers.DateField(source='creation_date', read_only=True)
+    
+    class Meta:
+        model = Establishment
+        fields = [
+            'id', 'unitNumber', 'name', 'address', 
+            'creationDate', 'status'
+        ]
+        read_only_fields = ['id']
+    
+    def get_address(self, obj):
+        """Return address as a nested object."""
+        return {
+            'street': obj.street,
+            'streetNumber': obj.street_number,
+            'city': obj.city,
+            'postalCode': obj.postal_code,
+            'country': obj.country
+        }
+
+
+class FinancialDataSerializer(serializers.ModelSerializer):
+    """Serializer for FinancialData model."""
+    
+    revenue_growth = serializers.ReadOnlyField()
+    
+    class Meta:
+        model = FinancialData
+        fields = [
+            'id', 'year', 'revenue', 'profit', 'margin', 'employees',
+            'revenue_growth', 'extra_data', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'revenue_growth', 'created_at', 'updated_at']
+    
+    def validate_year(self, value):
+        """Validate year is reasonable."""
+        import datetime
+        current_year = datetime.datetime.now().year
+        if value < 1900 or value > current_year + 1:
+            raise serializers.ValidationError(
+                _('Year must be between 1900 and %(year)s') % {'year': current_year + 1}
+            )
+        return value
+
+
+class CompanyListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for company listings."""
+    
+    is_active = serializers.ReadOnlyField()
+    is_followed = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Company
+        fields = [
+            'id', 'vat', 'name', 'status', 'legal_form', 'creation_date',
+            'employees', 'sector', 'company_size', 'region', 'city',
+            'is_active', 'is_followed', 'updated_at'
+        ]
+        read_only_fields = ['is_active', 'is_followed', 'updated_at']
+    
+    def get_is_followed(self, obj):
+        """Check if current user follows this company."""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return CompanyFollower.objects.filter(
+                user=request.user,
+                company=obj
+            ).exists()
+        return False
+
+
+class CompanyDetailSerializer(serializers.ModelSerializer):
+    """Detailed serializer for company with related data."""
+    
+    full_address = serializers.ReadOnlyField()
+    is_active = serializers.ReadOnlyField()
+    establishments = EstablishmentSerializer(many=True, read_only=True)
+    financial_data = FinancialDataSerializer(many=True, read_only=True)
+    is_followed = serializers.SerializerMethodField()
+    followers_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Company
+        fields = [
+            'id', 'vat', 'name', 'status', 'legal_form', 'creation_date',
+            'fiscal_year', 'last_update', 'capital', 'employees',
+            'nace_codes', 'activity', 'sector', 'company_type',
+            'company_size', 'company_description', 'region', 'city',
+            'website', 'phone', 'email', 'street', 'street_number',
+            'postal_code', 'country', 'full_address', 'is_active',
+            'establishments', 'financial_data', 'is_followed',
+            'followers_count', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'full_address', 'is_active', 'is_followed', 'followers_count',
+            'created_at', 'updated_at', 'last_update'
+        ]
+    
+    def get_is_followed(self, obj):
+        """Check if current user follows this company."""
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return CompanyFollower.objects.filter(
+                user=request.user,
+                company=obj
+            ).exists()
+        return False
+    
+    def get_followers_count(self, obj):
+        """Get number of users following this company."""
+        return obj.followers.count()
+
+
+class CompanyCreateUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating companies."""
+    
+    class Meta:
+        model = Company
+        fields = [
+            'id', 'vat', 'name', 'status', 'legal_form', 'creation_date',
+            'fiscal_year', 'capital', 'employees', 'nace_codes', 'activity',
+            'sector', 'company_type', 'company_size', 'company_description',
+            'region', 'city', 'website', 'phone', 'email', 'street',
+            'street_number', 'postal_code', 'country'
+        ]
+        read_only_fields = ['id']
+        extra_kwargs = {
+            'vat': {'required': True},
+            'name': {'required': True},
+        }
+    
+    def validate_vat(self, value):
+        """Validate VAT number format."""
+        # Remove spaces and convert to uppercase
+        vat = value.upper().replace(' ', '').replace('.', '')
+        
+        # Check format
+        if not vat.startswith('BE') or len(vat) != 12:
+            raise serializers.ValidationError(
+                _('VAT number must be in format BE0123456789')
+            )
+        
+        # Check if all characters after BE are digits
+        if not vat[2:].isdigit():
+            raise serializers.ValidationError(
+                _('VAT number must contain only digits after BE')
+            )
+        
+        # TODO: NEEDS YOUR INPUT - Add VAT checksum validation if required
+        # Belgian VAT numbers have a checksum algorithm
+        
+        return vat
+
+
+class CompanyFollowerSerializer(serializers.ModelSerializer):
+    """Serializer for company followers."""
+    
+    company = CompanyListSerializer(read_only=True)
+    company_id = serializers.CharField(write_only=True)
+    
+    class Meta:
+        model = CompanyFollower
+        fields = [
+            'id', 'company', 'company_id', 'followed_since', 'notify_updates'
+        ]
+        read_only_fields = ['id', 'followed_since']
+    
+    def validate_company_id(self, value):
+        """Validate company exists."""
+        try:
+            Company.objects.get(id=value)
+        except Company.DoesNotExist:
+            raise serializers.ValidationError(
+                _('Company with this ID does not exist.')
+            )
+        return value
+    
+    def create(self, validated_data):
+        """Create a new follower relationship."""
+        company_id = validated_data.pop('company_id')
+        company = Company.objects.get(id=company_id)
+        
+        # Check if already following
+        user = self.context['request'].user
+        if CompanyFollower.objects.filter(user=user, company=company).exists():
+            raise serializers.ValidationError(
+                _('You are already following this company.')
+            )
+        
+        return CompanyFollower.objects.create(
+            user=user,
+            company=company,
+            **validated_data
+        )
+
+
+class CompanyStatisticsSerializer(serializers.Serializer):
+    """Serializer for company statistics."""
+    
+    total_companies = serializers.IntegerField()
+    active_companies = serializers.IntegerField()
+    total_employees = serializers.IntegerField()
+    by_region = serializers.DictField()
+    by_size = serializers.DictField()
+    by_sector = serializers.DictField()
+    recent_updates = serializers.IntegerField()

@@ -20,7 +20,7 @@ export const useAddRecentSearch = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (search: { name: string; vat: string }) => 
+    mutationFn: (search: { name: string; vat: string; company_id: string }) => 
       recentSearchApi.add(search),
     onSuccess: () => {
       // Invalidate recent searches to refetch

@@ -204,7 +204,7 @@ const CompanyDetails = () => {
           )}
 
           {activeTab === 'establishments' && (
-            company.establishments && <EstablishmentsList establishments={company.establishments} />
+            <EstablishmentsList establishments={company.establishments || []} />
           )}
 
           {activeTab === 'contact' && (

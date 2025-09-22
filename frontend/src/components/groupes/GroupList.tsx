@@ -1,5 +1,23 @@
-import React from 'react';
-import GroupCard from './GroupCard';
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useQueryClient } from '@tanstack/react-query';
+import SortableGroupCard from './SortableGroupCard';
+import { groupApi } from '../../services/api';
+import { useToast } from '../../hooks/useToast';
+import { queryKeys } from '../../lib/queryClient';
 
 interface CompanyGroup {
   id: string;
@@ -24,8 +42,63 @@ const GroupList: React.FC<GroupListProps> = ({
   onEditGroup,
   onShowNewGroupForm,
   getGroupIcon,
-}) =>{
-  if (groups.length === 0) {
+}) => {
+  const [sortedGroups, setSortedGroups] = useState(groups);
+  const { success, error: showError } = useToast();
+  const queryClient = useQueryClient();
+
+  // Update sorted groups when groups prop changes
+  useEffect(() => {
+    setSortedGroups(groups);
+  }, [groups]);
+
+  // Setup drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end
+  const handleDragEnd = useCallback((event: any) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id && over) {
+      setSortedGroups((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newOrder = arrayMove(items, oldIndex, newIndex);
+          
+          // Update positions in backend
+          const groupIds = newOrder.map(g => g.id);
+          
+          groupApi.updateGroupPositions(groupIds)
+            .then(() => {
+              success('Ordre des groupes mis à jour');
+              // Invalidate groups query to refetch with new order
+              queryClient.invalidateQueries({ queryKey: queryKeys.groups.list() });
+            })
+            .catch(() => {
+              showError('Erreur lors de la mise à jour de l\'ordre');
+              // Revert on error
+              setSortedGroups(groups);
+            });
+          
+          return newOrder;
+        }
+        return items;
+      });
+    }
+  }, [groups, success, showError]);
+
+  if (sortedGroups.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="w-16 h-16 bg-gray-100 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -46,19 +119,29 @@ const GroupList: React.FC<GroupListProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {groups.map((group) => (
-        <GroupCard
-          key={group.id}
-          group={group}
-          onDelete={onDeleteGroup}
-          onEdit={onEditGroup}
-          onViewCompanies={() => {
-            // Navigation handled in GroupCard component
-          }}
-          getGroupIcon={getGroupIcon}
-        />
-      ))}
+    <div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={sortedGroups}
+          strategy={rectSortingStrategy}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sortedGroups.map((group) => (
+              <SortableGroupCard
+                key={group.id}
+                group={group}
+                onDelete={onDeleteGroup}
+                onEdit={onEditGroup}
+                getGroupIcon={getGroupIcon}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 };

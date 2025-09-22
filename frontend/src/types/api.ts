@@ -83,12 +83,14 @@ export interface CompanyGroup {
   companiesCount: number;
   createdAt: string;
   icon?: string;
+  color?: string;
 }
 
 export interface RecentSearch {
   id: string;
   name: string;
   vat: string;
+  company_id: string;
   time: string;
   color: string;
 }

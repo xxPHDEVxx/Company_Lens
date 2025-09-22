@@ -9,21 +9,35 @@ interface NewGroupFormData {
 interface GroupFormProps {
   mode: 'create' | 'edit';
   initialData?: NewGroupFormData;
-  onSubmit: (data: NewGroupFormData) => void;
+  onSubmit: (data: NewGroupFormData) => Promise<void>;
   onCancel: () => void;
   getGroupIcon: (iconKey?: string) => React.ReactNode;
   groupIcons: Record<string, { name: string; icon: React.ReactNode }>;
+  isLoading?: boolean;
 }
 
 const GroupForm: React.FC<GroupFormProps> = ({
   mode,
-  initialData = { name: '', description: '', icon: 'default' },
+  initialData = { name: '', description: '', icon: 'folder' },
   onSubmit,
   onCancel,
   getGroupIcon,
   groupIcons,
+  isLoading = false,
 }) => {
   const [formData, setFormData] = React.useState<NewGroupFormData>(initialData);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleSubmit = async () => {
+    if (!formData.name.trim() || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
@@ -97,15 +111,19 @@ const GroupForm: React.FC<GroupFormProps> = ({
         <div className="flex gap-3 mt-6">
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Annuler
           </button>
           <button
-            onClick={() => onSubmit(formData)}
-            disabled={!formData.name.trim()}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200"
+            onClick={handleSubmit}
+            disabled={!formData.name.trim() || isSubmitting}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center gap-2"
           >
+            {isSubmitting && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            )}
             {mode === 'create' ? 'Créer' : 'Modifier'}
           </button>
         </div>

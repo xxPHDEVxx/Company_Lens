@@ -1,45 +1,198 @@
-import React, { useState } from 'react';
-import { X, Trash2, Plus, Building2, Eye } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { X, Trash2, Plus, Building2, Eye, GripVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import ConfirmationModal from '../common/ConfirmationModal';
+import { ToastContainer } from '../common/Toast';
+import { useToast } from '../../hooks/useToast';
+import { groupApi } from '../../services/api';
 import type { Company, CompanyGroup } from '../../types/api';
 
 interface GroupCompaniesViewProps {
   group: CompanyGroup;
   companies: Company[];
-  followedCompanies: Company[];
+  availableCompanies: Company[];
   onBack: () => void;
   onDeleteCompany: (groupId: string, companyId: string) => void;
   onAddCompanies: (groupId: string, companyIds: string[]) => void;
   getGroupIcon: (iconKey?: string) => React.ReactNode;
 }
 
+// Sortable Company Card Component
+interface SortableCompanyCardProps {
+  company: Company;
+  onDelete: (companyId: string) => void;
+  onView: (companyId: string) => void;
+}
+
+function SortableCompanyCard({ company, onDelete, onView }: SortableCompanyCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useSortable({ id: company.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-shadow ${
+        isDragging ? 'opacity-50 shadow-2xl z-50' : ''
+      }`}
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-start gap-3">
+          <div
+            {...attributes}
+            {...listeners}
+            className="mt-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 touch-none"
+            title="Glisser pour réorganiser"
+          >
+            <GripVertical className="w-5 h-5" />
+          </div>
+          <Building2 className="w-8 h-8 text-blue-600" />
+        </div>
+        <button
+          onClick={() => onDelete(company.id)}
+          className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+          title="Retirer du groupe"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+      <h3 className="font-semibold text-gray-900 mb-1">{company.name}</h3>
+      <p className="text-sm text-gray-600 mb-2">TVA: {company.vat}</p>
+      {company.sector && (
+        <p className="text-sm text-gray-500 mb-1">Secteur: {company.sector}</p>
+      )}
+      {company.city && (
+        <p className="text-sm text-gray-500">Localisation: {company.city}</p>
+      )}
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        <button
+          onClick={() => onView(company.id)}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+        >
+          <Eye className="w-4 h-4" />
+          Voir détails
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
   group,
   companies,
-  followedCompanies,
+  availableCompanies,
   onDeleteCompany,
   onAddCompanies,
 }) => {
   const navigate = useNavigate();
+  const { toasts, removeToast, success, error: showError } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortedCompanies, setSortedCompanies] = useState(companies);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; companyId: string | null }>({
+    isOpen: false,
+    companyId: null,
+  });
+
+  // Update sorted companies when companies prop changes
+  React.useEffect(() => {
+    setSortedCompanies(companies);
+  }, [companies]);
+
+  // Setup drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end
+  const handleDragEnd = useCallback((event: any) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id && over) {
+      setSortedCompanies((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newOrder = arrayMove(items, oldIndex, newIndex);
+          
+          // Update positions in backend
+          const companyIds = newOrder.map(c => c.id);
+          groupApi.updatePositions(group.id, companyIds)
+            .then(() => {
+              success('Ordre des entreprises mis à jour');
+            })
+            .catch(() => {
+              showError('Erreur lors de la mise à jour de l\'ordre');
+              // Revert on error
+              setSortedCompanies(companies);
+            });
+          
+          return newOrder;
+        }
+        return items;
+      });
+    }
+  }, [group.id, companies, success, showError]);
 
   // Filter companies that are not already in the group
-  const availableCompanies = followedCompanies.filter(
+  const companiesNotInGroup = availableCompanies.filter(
     (company) => !companies.some((c) => c.id === company.id)
   );
 
   // Filter available companies based on search term
-  const filteredCompanies = availableCompanies.filter(
+  const filteredCompanies = companiesNotInGroup.filter(
     (company) =>
       company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (company.vat || company.vat || '').includes(searchTerm)
+      (company.vat || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteCompany = (companyId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir retirer cette entreprise du groupe ?')) {
-      onDeleteCompany(group.id, companyId);
+    setDeleteConfirmation({ isOpen: true, companyId });
+  };
+
+  const confirmDeleteCompany = async () => {
+    if (!deleteConfirmation.companyId) return;
+    
+    try {
+      await onDeleteCompany(group.id, deleteConfirmation.companyId);
+      success('Entreprise retirée du groupe avec succès');
+      setDeleteConfirmation({ isOpen: false, companyId: null });
+    } catch (err) {
+      showError('Erreur lors de la suppression de l\'entreprise du groupe');
     }
   };
   
@@ -53,12 +206,17 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
     });
   };
 
-  const handleAddCompanies = () => {
+  const handleAddCompanies = async () => {
     if (selectedCompanies.length > 0) {
-      onAddCompanies(group.id, selectedCompanies);
-      setSelectedCompanies([]);
-      setShowAddModal(false);
-      setSearchTerm('');
+      try {
+        await onAddCompanies(group.id, selectedCompanies);
+        success(`${selectedCompanies.length} entreprise${selectedCompanies.length > 1 ? 's ajoutées' : ' ajoutée'} au groupe`);
+        setSelectedCompanies([]);
+        setShowAddModal(false);
+        setSearchTerm('');
+      } catch (err) {
+        showError('Erreur lors de l\'ajout des entreprises au groupe');
+      }
     }
   };
 
@@ -75,7 +233,12 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
       {/* Actions Bar */}
       <div className="flex justify-between items-center">
         <div className="text-gray-600">
-          <span className="font-medium">{companies.length}</span> entreprise{companies.length !== 1 ? 's' : ''} dans ce groupe
+          <span className="font-medium">{sortedCompanies.length}</span> entreprise{sortedCompanies.length !== 1 ? 's' : ''} dans ce groupe
+          {sortedCompanies.length > 1 && (
+            <span className="ml-2 text-sm text-gray-500">
+              (Glissez l'icône ⋮⋮ pour réorganiser)
+            </span>
+          )}
         </div>
         <button
           onClick={() => setShowAddModal(true)}
@@ -86,8 +249,8 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
         </button>
       </div>
 
-      {/* Companies List */}
-      {companies.length === 0 ? (
+      {/* Companies List with Drag and Drop */}
+      {sortedCompanies.length === 0 ? (
         <div className="bg-white rounded-xl p-12 text-center shadow-md">
           <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 mb-4">Aucune entreprise dans ce groupe</p>
@@ -99,42 +262,27 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {companies.map((company) => (
-            <div
-              key={company.id}
-              className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-lg transition-all duration-200"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <Building2 className="w-8 h-8 text-blue-600" />
-                <button
-                  onClick={() => handleDeleteCompany(company.id)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                  title="Retirer du groupe"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">{company.name}</h3>
-              <p className="text-sm text-gray-600 mb-2">TVA: {company.vat}</p>
-              {company.sector && (
-                <p className="text-sm text-gray-500 mb-1">Secteur: {company.sector}</p>
-              )}
-              {(company.city) && (
-                <p className="text-sm text-gray-500">Localisation: {company.city}</p>
-              )}
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <button
-                  onClick={() => handleViewCompanyDetails(company.id)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
-                >
-                  <Eye className="w-4 h-4" />
-                  Voir détails
-                </button>
-              </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={sortedCompanies}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {sortedCompanies.map((company) => (
+                <SortableCompanyCard
+                  key={company.id}
+                  company={company}
+                  onDelete={handleDeleteCompany}
+                  onView={handleViewCompanyDetails}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Add Companies Modal */}
@@ -175,7 +323,7 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
                   <div className="text-center py-8 text-gray-500">
                     {searchTerm
                       ? 'Aucune entreprise trouvée'
-                      : 'Toutes vos entreprises suivies sont déjà dans ce groupe'}
+                      : 'Toutes les entreprises sont déjà dans ce groupe'}
                   </div>
                 ) : (
                   filteredCompanies.map((company) => (
@@ -191,7 +339,7 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
                       />
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">{company.name}</div>
-                        <div className="text-sm text-gray-600">TVA: {company.vat || company.vat}</div>
+                        <div className="text-sm text-gray-600">TVA: {company.vat || 'N/A'}</div>
                         {company.sector && (
                           <div className="text-sm text-gray-500">{company.sector}</div>
                         )}
@@ -233,6 +381,21 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={() => setDeleteConfirmation({ isOpen: false, companyId: null })}
+        onConfirm={confirmDeleteCompany}
+        title="Retirer l'entreprise"
+        message="Êtes-vous sûr de vouloir retirer cette entreprise du groupe ?"
+        confirmText="Retirer"
+        cancelText="Annuler"
+        variant="warning"
+      />
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

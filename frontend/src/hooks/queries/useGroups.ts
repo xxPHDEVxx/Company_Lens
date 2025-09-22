@@ -106,10 +106,12 @@ export const useAddCompaniesToGroup = () => {
     mutationFn: ({ groupId, companyIds }: { groupId: string; companyIds: string[] }) =>
       groupApi.addCompanies(groupId, companyIds),
     onSuccess: (_, { groupId }) => {
-      // Invalidate the group's companies list
+      // Invalidate the group's companies list to trigger refetch
       queryClient.invalidateQueries({ queryKey: queryKeys.groups.companies(groupId) });
       // Invalidate the group detail to update company count
       queryClient.invalidateQueries({ queryKey: queryKeys.groups.detail(groupId) });
+      // Invalidate the groups list to update counts
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups.list() });
     },
   });
 };
@@ -121,14 +123,13 @@ export const useRemoveCompanyFromGroup = () => {
   return useMutation({
     mutationFn: ({ groupId, companyId }: { groupId: string; companyId: string }) =>
       groupApi.removeCompany(groupId, companyId),
-    onSuccess: (_, { groupId, companyId }) => {
-      // Optimistically update the group's companies list
-      queryClient.setQueryData<Company[]>(
-        queryKeys.groups.companies(groupId),
-        (old) => old?.filter(company => company.id !== companyId) || []
-      );
+    onSuccess: (_, { groupId }) => {
+      // Invalidate the group's companies list to trigger refetch
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups.companies(groupId) });
       // Invalidate the group detail to update company count
       queryClient.invalidateQueries({ queryKey: queryKeys.groups.detail(groupId) });
+      // Invalidate the groups list to update counts
+      queryClient.invalidateQueries({ queryKey: queryKeys.groups.list() });
     },
   });
 };
