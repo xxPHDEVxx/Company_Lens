@@ -11,20 +11,38 @@ const VatNumberInput: React.FC<VatNumberInputProps> = ({
   onSearch,
   isSearching
 }) => {
+  const handleClear = () => {
+    onChange('');
+  };
+
   return (
     <div className="mb-6">
       <label htmlFor="vatNumber" className="block text-sm font-medium text-gray-700 mb-2">
         Numéro de TVA *
       </label>
-      <div className="flex gap-3">
-        <input
-          type="text"
-          id="vatNumber"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Ex: BE0123456789 ou 0123456789"
-          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
+      <div className="flex gap-2">
+        <div className="flex-1 relative">
+          <input
+            type="text"
+            id="vatNumber"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Ex: BE0123456789 ou 0123456789"
+            className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          {value && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Effacer le numéro de TVA"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
         <SearchButton
           onClick={onSearch}
           isSearching={isSearching}

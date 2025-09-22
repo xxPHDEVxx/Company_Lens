@@ -7,10 +7,11 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from django.db.models import Q, Count, Sum, Avg
+from django.db.models import Count, Sum, Avg
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from datetime import timedelta
+
 from .models import Company, Establishment, FinancialData, CompanyFollower
 from .serializers import (
     CompanyListSerializer,
@@ -19,7 +20,6 @@ from .serializers import (
     EstablishmentSerializer,
     FinancialDataSerializer,
     CompanyFollowerSerializer,
-    CompanySearchSerializer,
     CompanyStatisticsSerializer
 )
 
@@ -92,56 +92,69 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return CompanyDetailSerializer
         elif self.action in ['create', 'update', 'partial_update']:
             return CompanyCreateUpdateSerializer
-        elif self.action == 'search':
-            return CompanySearchSerializer
         elif self.action == 'statistics':
             return CompanyStatisticsSerializer
         return CompanyDetailSerializer
     
-    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def search(self, request):
         """
         Advanced company search with multiple criteria.
         """
-        serializer = CompanySearchSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
         queryset = Company.objects.all()
-        data = serializer.validated_data
+        params = request.query_params
         
-        # Apply search based on type
-        query = data.get('query', '').strip()
-        search_type = data.get('search_type', 'name')
+        # Initialize search variables
+        query = ''
+        search_type = 'name'
         
-        if query:
-            if search_type == 'vat':
-                # Clean VAT number for search
-                clean_vat = query.upper().replace(' ', '').replace('.', '')
-                queryset = queryset.filter(vat__icontains=clean_vat)
-            elif search_type == 'name':
-                queryset = queryset.filter(name__icontains=query)
-            elif search_type == 'city':
-                queryset = queryset.filter(city__icontains=query)
-            elif search_type == 'sector':
-                queryset = queryset.filter(sector__icontains=query)
-            elif search_type == 'nace':
-                queryset = queryset.filter(nace_codes__contains=query)
+        # Check for direct VAT number search (from frontend)
+        vat_number = params.get('vatNumber', '').strip()
+        if vat_number:
+            # Clean VAT number for search
+            clean_vat = vat_number.upper().replace(' ', '').replace('.', '')
+            queryset = queryset.filter(vat__icontains=clean_vat)
+            search_type = 'vat'  # Set search type for ordering logic
+        else:
+            # Apply search based on type (legacy/alternative format)
+            query = params.get('query', '').strip()
+            search_type = params.get('search_type', 'name')
+            
+            if query:
+                if search_type == 'vat':
+                    # Clean VAT number for search
+                    clean_vat = query.upper().replace(' ', '').replace('.', '')
+                    queryset = queryset.filter(vat__icontains=clean_vat)
+                elif search_type == 'name':
+                    queryset = queryset.filter(name__icontains=query)
+                elif search_type == 'city':
+                    queryset = queryset.filter(city__icontains=query)
+                elif search_type == 'sector':
+                    queryset = queryset.filter(sector__icontains=query)
+                elif search_type == 'nace':
+                    queryset = queryset.filter(nace_codes__contains=query)
         
         # Apply additional filters
-        if data.get('region'):
-            queryset = queryset.filter(region=data['region'])
+        if params.get('region'):
+            queryset = queryset.filter(region=params['region'])
         
-        if data.get('status'):
-            queryset = queryset.filter(status=data['status'])
+        if params.get('status'):
+            queryset = queryset.filter(status=params['status'])
         
-        if data.get('company_size'):
-            queryset = queryset.filter(company_size=data['company_size'])
+        if params.get('company_size'):
+            queryset = queryset.filter(company_size=params['company_size'])
         
-        if data.get('min_employees'):
-            queryset = queryset.filter(employees__gte=data['min_employees'])
+        if params.get('min_employees'):
+            try:
+                queryset = queryset.filter(employees__gte=int(params['min_employees']))
+            except (ValueError, TypeError):
+                pass
         
-        if data.get('max_employees'):
-            queryset = queryset.filter(employees__lte=data['max_employees'])
+        if params.get('max_employees'):
+            try:
+                queryset = queryset.filter(employees__lte=int(params['max_employees']))
+            except (ValueError, TypeError):
+                pass
         
         # Order by relevance or name
         if query and search_type == 'name':

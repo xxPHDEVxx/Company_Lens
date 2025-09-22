@@ -209,69 +209,6 @@ class CompanyFollowerSerializer(serializers.ModelSerializer):
         )
 
 
-class CompanySearchSerializer(serializers.Serializer):
-    """Serializer for company search parameters."""
-    
-    SEARCH_TYPE_CHOICES = [
-        ('vat', 'VAT Number'),
-        ('name', 'Company Name'),
-        ('city', 'City'),
-        ('sector', 'Sector'),
-        ('nace', 'NACE Code'),
-    ]
-    
-    query = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        help_text=_('Search query string')
-    )
-    search_type = serializers.ChoiceField(
-        choices=SEARCH_TYPE_CHOICES,
-        default='name',
-        help_text=_('Type of search to perform')
-    )
-    region = serializers.ChoiceField(
-        choices=Company.REGION_CHOICES,
-        required=False,
-        allow_blank=True,
-        help_text=_('Filter by region')
-    )
-    status = serializers.ChoiceField(
-        choices=Company.STATUS_CHOICES,
-        required=False,
-        allow_blank=True,
-        help_text=_('Filter by company status')
-    )
-    company_size = serializers.ChoiceField(
-        choices=Company.COMPANY_SIZE_CHOICES,
-        required=False,
-        allow_blank=True,
-        help_text=_('Filter by company size')
-    )
-    min_employees = serializers.IntegerField(
-        required=False,
-        min_value=0,
-        help_text=_('Minimum number of employees')
-    )
-    max_employees = serializers.IntegerField(
-        required=False,
-        min_value=0,
-        help_text=_('Maximum number of employees')
-    )
-    
-    def validate(self, attrs):
-        """Validate search parameters."""
-        # Ensure min <= max for employees
-        min_emp = attrs.get('min_employees')
-        max_emp = attrs.get('max_employees')
-        if min_emp and max_emp and min_emp > max_emp:
-            raise serializers.ValidationError({
-                'max_employees': _('Maximum employees must be greater than minimum.')
-            })
-        
-        return attrs
-
-
 class CompanyStatisticsSerializer(serializers.Serializer):
     """Serializer for company statistics."""
     

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MainContentLayout from '../components/layout/MainContentLayout';
 import { SearchForm, SearchResults, RecentSearches } from '../components/recherche';
 import { useCompanySearch, useAddRecentSearch } from '../hooks/queries';
@@ -29,7 +29,7 @@ const RechercheContent = () => {
     setSearchEnabled(false); // Disable auto-search when filters change
   };
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!filters.vatNumber.trim()) {
       alert('Veuillez entrer un numéro de TVA');
       return;
@@ -37,16 +37,29 @@ const RechercheContent = () => {
 
     setHasSearched(true);
     setSearchEnabled(true); // Enable the query
-
-    // Add to recent searches if we have results
-    if (searchResults.length > 0) {
-      const firstResult = searchResults[0];
-      await addRecentSearchMutation.mutateAsync({
-        name: firstResult.name,
-        vat: firstResult.vat
-      });
-    }
   };
+
+  // Add to recent searches when we get results
+  useEffect(() => {
+    if (searchEnabled && searchResults?.length > 0 && !isSearching) {
+      const firstResult = searchResults[0];
+      // Only save if we have all required fields
+      if (firstResult?.name && firstResult?.vat && firstResult?.id) {
+        addRecentSearchMutation.mutate({
+          name: firstResult.name,
+          vat: firstResult.vat,
+          company_id: firstResult.id
+        });
+      } else {
+        // Log warning if company ID is missing
+        console.warn('Cannot save recent search - missing company ID:', {
+          name: firstResult?.name,
+          vat: firstResult?.vat,
+          id: firstResult?.id
+        });
+      }
+    }
+  }, [searchResults, searchEnabled, isSearching]);
 
 
   return (

@@ -1,6 +1,8 @@
+import { useNavigate } from 'react-router-dom';
 import { useRecentSearches } from '../../hooks/queries';
 
 const RecentSearches = () => {
+  const navigate = useNavigate();
   const { data: recentSearches = [], isLoading } = useRecentSearches();
 
   if (isLoading) {
@@ -27,16 +29,37 @@ const RecentSearches = () => {
     );
   }
 
+  // Only show the 5 most recent searches
+  const displayedSearches = recentSearches.slice(0, 5);
+
+  const handleSearchClick = (companyId: string, vat: string) => {
+    // Use company ID if available, fallback to VAT number without 'BE' prefix
+    if (companyId && companyId.trim()) {
+      navigate(`/company/${companyId}`);
+    } else if (vat) {
+      // Fallback: try using VAT as ID (remove BE prefix)
+      const cleanVat = vat.replace(/^BE/, '');
+      console.warn('Using VAT as fallback ID:', cleanVat);
+      navigate(`/company/${cleanVat}`);
+    } else {
+      console.error('Cannot navigate - no company ID or VAT available');
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
       <div className="p-6 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-800">Recherches récentes</h2>
-        <p className="text-sm text-gray-600 mt-1">Vos dernières analyses d'entreprises</p>
+        <p className="text-sm text-gray-600 mt-1">Vos 5 dernières analyses d'entreprises</p>
       </div>
       <div className="p-6">
         <div className="space-y-4">
-          {recentSearches.map((search, index) => (
-            <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+          {displayedSearches.map((search, index) => (
+            <div 
+              key={search.id || index} 
+              onClick={() => handleSearchClick(search.company_id, search.vat)}
+              className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+            >
               <div className="flex items-center">
                 <div className={`w-10 h-10 bg-gradient-to-r ${search.color} rounded-lg flex items-center justify-center mr-4`}>
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,16 +71,28 @@ const RecentSearches = () => {
                   <p className="text-sm text-gray-600">{search.vat}</p>
                 </div>
               </div>
-              <div className="text-sm text-gray-500">{search.time}</div>
+              <div className="text-sm text-gray-500">
+                {search.time ? new Date(search.time).toLocaleString('fr-BE', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: false
+                }) : ''}
+              </div>
             </div>
           ))}
         </div>
         
-        <div className="mt-6 text-center">
-          <button className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
-            Voir tout l'historique →
-          </button>
-        </div>
+        {recentSearches.length > 5 && (
+          <div className="mt-6 text-center">
+            <button className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+              Voir tout l'historique ({recentSearches.length} recherches) →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
