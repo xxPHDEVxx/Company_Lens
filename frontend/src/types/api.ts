@@ -1,24 +1,27 @@
 // API Types for Company Lens
 
 export interface Address {
-  street: string;
-  streetNumber: string;
-  city: string;
-  postalCode: string;
-  country: string;
+  id?: string;
+  street?: string;
+  streetNumber?: string;
+  postalBox?: string;
+  postalCode?: string;
+  city?: string;
+  province?: string;
+  region?: 'flanders' | 'wallonia' | 'brussels';
+  country?: string;
+  fullAddress?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Establishment {
   id: string;
   unitNumber: string;
   name: string;
-  type: 'headquarters' | 'branch' | 'production';
-  address: Address;
-  phone?: string;
-  email?: string;
-  employees?: number;
-  creationDate: string;
-  status: 'active' | 'inactive';
+  address?: Address;
+  creationDate?: string;
+  status: 'active' | 'inactive' | 'closed';
 }
 
 export interface FinancialData {
@@ -47,6 +50,19 @@ export interface FinancialMetrics {
   };
 }
 
+export interface Activity {
+  id: string;
+  nacebelCodes: string[];
+  companyActivities: string[];
+  sectors: string[];
+  services: string[];
+  description?: string;
+  primarySector?: string;
+  primaryNacebel?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Company {
   id: string;
   name: string;
@@ -56,21 +72,19 @@ export interface Company {
   creationDate: string;
   capital?: string;
   employees?: number;
-  naceCodes?: string[];
-  activity?: string;
   fiscalYear?: string;
   lastUpdate?: string;
   companyType?: string;
   companySize?: string;
-  companyDescription?: string;
-  sector?: string;
   city?: string;
   region?: 'flanders' | 'wallonia' | 'brussels';
   followedSince?: string;
   website?: string;
+  is_followed?: boolean;
   address?: Address;
   phone?: string;
   email?: string;
+  activities?: Activity;
   establishments?: Establishment[];
   financialData?: FinancialData[];
   financialMetrics?: FinancialMetrics;
