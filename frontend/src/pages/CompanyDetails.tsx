@@ -5,14 +5,18 @@ import CompanyHeader from '../components/company/CompanyHeader';
 import GeneralInfo from '../components/company/GeneralInfo';
 import EstablishmentsList from '../components/company/EstablishmentsList';
 import ContactInfo from '../components/company/ContactInfo';
+import ActivitiesInfo from '../components/company/ActivitiesInfo';
 import FinancialCharts from '../components/company/FinancialCharts';
 import FinancialMetrics from '../components/company/FinancialMetrics';
-import { useCompany } from '../hooks/queries';
+import { useCompany, useFollowCompany, useUnfollowCompany } from '../hooks/queries';
+import { useToast } from '../hooks/useToast';
+import { ToastContainer } from '../components/common/Toast';
 
 const CompanyDetails = () => {
   const { companyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { toasts, removeToast, success, error: showError } = useToast();
   
   const [activeTab, setActiveTab] = useState('general');
   
@@ -20,11 +24,31 @@ const CompanyDetails = () => {
   const sourcePage = location.state?.from || 'Suivi';
   const sourceRoute = location.state?.route || '/suivi';
 
-  // Use React Query hook
+  // Use React Query hooks
   const { data: company, isLoading, error } = useCompany(companyId);
+  const followMutation = useFollowCompany();
+  const unfollowMutation = useUnfollowCompany();
+
+  // Handle follow/unfollow
+  const handleFollowToggle = async () => {
+    if (!company) return;
+    
+    try {
+      if (company.is_followed) {
+        await unfollowMutation.mutateAsync(company.id);
+        success('Entreprise retirée des suivis');
+      } else {
+        await followMutation.mutateAsync(company.id);
+        success('Entreprise ajoutée aux suivis');
+      }
+    } catch (err) {
+      showError('Erreur lors de la mise à jour du suivi');
+    }
+  };
 
   const tabs = [
     { id: 'general', label: 'Informations Générales' },
+    { id: 'activities', label: 'Activités' },
     { id: 'financial', label: 'Données Financières' },
     { id: 'establishments', label: 'Établissements' },
     { id: 'contact', label: 'Contact' },
@@ -96,41 +120,32 @@ const CompanyDetails = () => {
     );
   }
 
-  const companyData = {
-    name: company.name,
-    status: company.status,
-    vat: company.vat,
-    legalForm: company.legalForm,
-    creationDate: company.creationDate,
-    mainAddress: company.city || 'Non spécifié',
-  };
-
   const generalInfo = {
     vat: company.vat,
     legalForm: company.legalForm,
     creationDate: company.creationDate,
     capital: company.capital || '-',
     employees: company.employees || 0,
-    naceCodes: company.naceCodes || [],
-    activity: company.activity || '-',
+    naceCodes: company.activities?.nacebelCodes || [],
+    activity: company.activities?.description || '-',
     fiscalYear: company.fiscalYear || '-',
     lastUpdate: company.lastUpdate || '-',
     companyType: company.companyType || '-',
     companySize: company.companySize || '-',
-    companyDescription: company.companyDescription || '',
+    companyDescription: '',
   };
 
   const contactInfo = {
     address: company.address || {
-      street: '-',
-      streetNumber: '-',
-      city: company.city || '-',
-      postalCode: '-',
+      street: undefined,
+      streetNumber: undefined,
+      city: company.city,
+      postalCode: undefined,
       country: 'Belgique',
     },
-    phone: company.phone || '-',
-    email: company.email || '-',
-    website: company.website || '-',
+    phone: company.phone,
+    email: company.email,
+    website: company.website,
   };
 
   return (
@@ -149,8 +164,19 @@ const CompanyDetails = () => {
               </button>
             </div>
             <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
-                <Star className="w-5 h-5" />
+              <button 
+                onClick={handleFollowToggle}
+                className={`p-2 transition-colors ${
+                  company?.is_followed 
+                    ? 'text-yellow-500 hover:text-yellow-600' 
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                title={company?.is_followed ? 'Ne plus suivre' : 'Suivre cette entreprise'}
+              >
+                <Star 
+                  className="w-5 h-5" 
+                  fill={company?.is_followed ? 'currentColor' : 'none'}
+                />
               </button>
               <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
                 <Share2 className="w-5 h-5" />
@@ -167,7 +193,7 @@ const CompanyDetails = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Company Header */}
-        <CompanyHeader company={companyData} />
+        <CompanyHeader company={company} />
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
@@ -196,6 +222,10 @@ const CompanyDetails = () => {
             <GeneralInfo info={generalInfo} />
           )}
 
+          {activeTab === 'activities' && (
+            <ActivitiesInfo activities={company.activities} />
+          )}
+
           {activeTab === 'financial' && (
             <>
               {company.financialData && <FinancialCharts data={company.financialData} />}
@@ -212,6 +242,9 @@ const CompanyDetails = () => {
           )}
         </div>
       </div>
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 };

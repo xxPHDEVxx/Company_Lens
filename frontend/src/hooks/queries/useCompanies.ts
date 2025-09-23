@@ -107,8 +107,10 @@ export const useFollowCompany = () => {
       // Update the company detail if it exists in cache
       queryClient.setQueryData<Company>(
         queryKeys.companies.detail(companyId),
-        (old) => old ? { ...old, isFollowed: true } : old
+        (old) => old ? { ...old, is_followed: true } : old
       );
+      // Invalidate company detail to get fresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.companies.detail(companyId) });
     },
   });
 };
@@ -128,8 +130,10 @@ export const useUnfollowCompany = () => {
       // Update the company detail if it exists in cache
       queryClient.setQueryData<Company>(
         queryKeys.companies.detail(companyId),
-        (old) => old ? { ...old, isFollowed: false } : old
+        (old) => old ? { ...old, is_followed: false } : old
       );
+      // Invalidate company detail to get fresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.companies.detail(companyId) });
     },
   });
 };

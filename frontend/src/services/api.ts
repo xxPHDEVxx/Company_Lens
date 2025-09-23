@@ -106,7 +106,7 @@ export const companyApi = {
   },
 
   follow: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/companies/${id}/follow`, {
+    const response = await fetch(`${API_BASE_URL}/companies/${id}/follow/`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
@@ -114,7 +114,7 @@ export const companyApi = {
   },
 
   unfollow: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/companies/${id}/follow`, {
+    const response = await fetch(`${API_BASE_URL}/companies/${id}/unfollow/`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
