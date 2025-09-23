@@ -9,6 +9,7 @@ import type {
   SearchFilters 
 } from '../types/api';
 import { config } from '../config/environment';
+import { transformResponse, transformRequest } from '../utils/caseTransform';
 
 const API_BASE_URL = config.API_BASE_URL + '/api';
 
@@ -29,8 +30,9 @@ export const companyApi = {
     });
     if (!response.ok) throw new Error('Failed to fetch companies');
     const data = await response.json();
-    // Handle paginated response - extract results array
-    return data.results || data;
+    // Transform and handle paginated response
+    const transformed = transformResponse(data);
+    return transformed.results || transformed;
   },
 
   getFollowed: async (): Promise<Company[]> => {
@@ -39,8 +41,9 @@ export const companyApi = {
     });
     if (!response.ok) throw new Error('Failed to fetch followed companies');
     const data = await response.json();
-    // Handle paginated response - extract results array
-    return data.results || data;
+    // Transform and handle paginated response
+    const transformed = transformResponse(data);
+    return transformed.results || transformed;
   },
 
   getById: async (id: string): Promise<Company> => {
@@ -56,9 +59,13 @@ export const companyApi = {
     });
     const establishments = estResponse.ok ? await estResponse.json() : [];
     
+    // Transform the response to camelCase
+    const transformedData = transformResponse(data);
+    const transformedEstablishments = transformResponse(establishments);
+    
     return {
-      ...data,
-      establishments: establishments,
+      ...transformedData,
+      establishments: transformedEstablishments,
     };
   },
 
@@ -73,28 +80,31 @@ export const companyApi = {
     });
     if (!response.ok) throw new Error('Failed to search companies');
     const data = await response.json();
-    // Handle paginated response - extract results array
-    return data.results || data;
+    // Transform and handle paginated response
+    const transformed = transformResponse(data);
+    return transformed.results || transformed;
   },
 
   create: async (company: Partial<Company>): Promise<Company> => {
     const response = await fetch(`${API_BASE_URL}/companies`, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(company),
+      body: JSON.stringify(transformRequest(company)),
     });
     if (!response.ok) throw new Error('Failed to create company');
-    return response.json();
+    const data = await response.json();
+    return transformResponse(data);
   },
 
   update: async (id: string, updates: Partial<Company>): Promise<Company> => {
     const response = await fetch(`${API_BASE_URL}/companies/${id}`, {
       method: 'PUT',
       headers: getAuthHeaders(),
-      body: JSON.stringify(updates),
+      body: JSON.stringify(transformRequest(updates)),
     });
     if (!response.ok) throw new Error('Failed to update company');
-    return response.json();
+    const data = await response.json();
+    return transformResponse(data);
   },
 
   delete: async (id: string): Promise<void> => {
@@ -312,7 +322,7 @@ export const authApi = {
     }
     const data = await response.json();
     localStorage.setItem('authToken', data.token);
-    return data;
+    return transformResponse(data);
   },
 
   signup: async (userData: {
@@ -348,6 +358,37 @@ export const authApi = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to get current user');
-    return response.json();
+    const data = await response.json();
+    return transformResponse(data);
+  },
+
+  getUserCompany: async (): Promise<Company> => {
+    const response = await fetch(`${API_BASE_URL}/auth/user/company/`, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to get user company');
+    const data = await response.json();
+    return transformResponse(data);
+  },
+
+  updateUserCompany: async (data: Partial<Company>): Promise<Company> => {
+    const response = await fetch(`${API_BASE_URL}/auth/user/company/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(transformRequest(data)),
+    });
+    if (!response.ok) throw new Error('Failed to update company');
+    const responseData = await response.json();
+    return transformResponse(responseData);
+  },
+
+  removeUserCompany: async (): Promise<{ message: string; user: User }> => {
+    const response = await fetch(`${API_BASE_URL}/auth/user/company/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to remove company');
+    const data = await response.json();
+    return transformResponse(data);
   },
 };

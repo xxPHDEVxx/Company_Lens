@@ -68,8 +68,8 @@ export interface Company {
   name: string;
   status: 'active' | 'inactive';
   vat: string;
-  legalForm: string;
-  creationDate: string;
+  legalForm?: string;
+  creationDate?: string;
   capital?: string;
   employees?: number;
   fiscalYear?: string;
@@ -80,10 +80,12 @@ export interface Company {
   region?: 'flanders' | 'wallonia' | 'brussels';
   followedSince?: string;
   website?: string;
-  is_followed?: boolean;
-  address?: Address;
   phone?: string;
   email?: string;
+  is_followed?: boolean;
+  
+  // Related entities
+  address?: Address;
   activities?: Activity;
   establishments?: Establishment[];
   financialData?: FinancialData[];
