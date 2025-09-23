@@ -26,10 +26,10 @@ export interface Establishment {
 
 export interface FinancialData {
   year: number;
-  revenue: number;
-  profit: number;
-  margin: number;
-  employees: number;
+  revenue?: number;
+  profit?: number;
+  margin?: number;
+  employees?: number;
 }
 
 export interface FinancialMetrics {
@@ -52,10 +52,10 @@ export interface FinancialMetrics {
 
 export interface Activity {
   id: string;
-  nacebelCodes: string[];
-  companyActivities: string[];
-  sectors: string[];
-  services: string[];
+  nacebelCodes?: string[];
+  companyActivities?: string[];
+  sectors?: string[];
+  services?: string[];
   description?: string;
   primarySector?: string;
   primaryNacebel?: string;
