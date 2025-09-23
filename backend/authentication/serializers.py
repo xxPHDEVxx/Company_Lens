@@ -14,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model."""
     
     # Map company_id to companyId for frontend compatibility
-    companyId = serializers.CharField(source='company_id', read_only=True, allow_null=True)
+    companyId = serializers.CharField(source='company_id', required=False, allow_null=True, allow_blank=True)
     
     class Meta:
         model = User
@@ -23,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
             'avatar', 'bio', 'language', 'email_notifications',
             'date_joined', 'last_login', 'is_active'
         ]
-        read_only_fields = ['id', 'date_joined', 'last_login', 'companyId']
+        read_only_fields = ['id', 'date_joined', 'last_login']
         extra_kwargs = {
             'avatar': {'required': False, 'allow_null': True},
             'bio': {'required': False, 'allow_blank': True},
