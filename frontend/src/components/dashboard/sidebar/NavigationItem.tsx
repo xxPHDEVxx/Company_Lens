@@ -15,6 +15,7 @@ interface NavigationItemProps {
   isActive: boolean;
   isCollapsed: boolean;
   onClick: (route: string) => void;
+  disabled?: boolean;
 }
 
 const NavigationItem: React.FC<NavigationItemProps> = ({
@@ -22,19 +23,23 @@ const NavigationItem: React.FC<NavigationItemProps> = ({
   isActive,
   isCollapsed,
   onClick,
+  disabled = false,
 }) => {
   return (
     <div className="relative group mb-2">
       <button
-        onClick={() => onClick(item.route)}
+        onClick={() => !disabled && onClick(item.route)}
         className={`w-full flex items-center rounded-xl transition-all duration-300 relative ${
           isCollapsed ? 'py-3 justify-center' : 'px-4 py-3'
         } ${
-          isActive
+          disabled
+            ? 'opacity-50 cursor-not-allowed'
+            : isActive
             ? item.activeColor.split(' ')[0] + ' shadow-lg'
             : 'hover:bg-slate-700/50'
         }`}
         title={isCollapsed ? item.label : ''}
+        disabled={disabled}
       >
         {/* Icon Container - Always in fixed position */}
         <div className="flex items-center justify-center w-5 h-5 flex-shrink-0">
