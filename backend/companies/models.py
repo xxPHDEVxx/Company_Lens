@@ -12,6 +12,57 @@ from django.core.validators import RegexValidator
 User = get_user_model()
 
 
+class Address(models.Model):
+    """Address model for companies and establishments."""
+    
+    # Address fields
+    street = models.CharField(_('street'), max_length=255, blank=True)
+    street_number = models.CharField(_('street number'), max_length=20, blank=True)
+    postal_box = models.CharField(_('postal box'), max_length=50, blank=True, help_text=_('e.g., Box 12, Boite 5'))
+    postal_code = models.CharField(_('postal code'), max_length=10, blank=True)
+    city = models.CharField(_('city'), max_length=100, blank=True)
+    province = models.CharField(_('province'), max_length=100, blank=True)
+    region = models.CharField(
+        _('region'), 
+        max_length=20, 
+        choices=[
+            ('flanders', _('Flanders')),
+            ('wallonia', _('Wallonia')),
+            ('brussels', _('Brussels')),
+        ], 
+        blank=True
+    )
+    country = models.CharField(_('country'), max_length=2, default='BE')
+    
+    # Timestamps
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    
+    class Meta:
+        verbose_name = _('address')
+        verbose_name_plural = _('addresses')
+        db_table = 'addresses'
+    
+    def __str__(self):
+        return self.full_address
+    
+    @property
+    def full_address(self):
+        """Return the full formatted address."""
+        parts = []
+        if self.street and self.street_number:
+            parts.append(f"{self.street} {self.street_number}")
+        if self.postal_box:
+            parts.append(self.postal_box)
+        if self.postal_code and self.city:
+            parts.append(f"{self.postal_code} {self.city}")
+        if self.province:
+            parts.append(self.province)
+        if self.country:
+            parts.append(self.country)
+        return ', '.join(filter(None, parts)) or 'No address'
+
+
 class Company(models.Model):
     """Main company model representing Belgian companies."""
     
@@ -98,14 +149,8 @@ class Company(models.Model):
     employees = models.IntegerField(_('number of employees'), blank=True, null=True)
     
     # Classification
-    nace_codes = models.JSONField(
-        _('NACE codes'),
-        default=list,
-        blank=True,
-        help_text=_('List of NACE activity codes')
-    )
-    activity = models.TextField(_('activity description'), blank=True)
-    sector = models.CharField(_('sector'), max_length=100, blank=True)
+    
+    # Keep these in Company model as they relate to company classification
     company_type = models.CharField(_('company type'), max_length=50, blank=True)
     company_size = models.CharField(
         _('company size'),
@@ -113,28 +158,21 @@ class Company(models.Model):
         choices=COMPANY_SIZE_CHOICES,
         blank=True
     )
-    company_description = models.TextField(_('company description'), blank=True)
     
-    # Location
-    region = models.CharField(
-        _('region'),
-        max_length=20,
-        choices=REGION_CHOICES,
+    # Address relation
+    address = models.OneToOneField(
+        Address,
+        on_delete=models.CASCADE,
+        related_name='company',
+        null=True,
         blank=True,
-        db_index=True
+        verbose_name=_('address')
     )
-    city = models.CharField(_('city'), max_length=100, blank=True, db_index=True)
     
     # Contact information
     website = models.URLField(_('website'), blank=True)
     phone = models.CharField(_('phone'), max_length=20, blank=True)
     email = models.EmailField(_('email'), blank=True)
-    
-    # Address (embedded)
-    street = models.CharField(_('street'), max_length=255, blank=True)
-    street_number = models.CharField(_('street number'), max_length=20, blank=True)
-    postal_code = models.CharField(_('postal code'), max_length=10, blank=True)
-    country = models.CharField(_('country'), max_length=2, default='BE')
     
     # Tracking
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
@@ -147,8 +185,8 @@ class Company(models.Model):
         ordering = ['name']
         indexes = [
             models.Index(fields=['vat']),
-            models.Index(fields=['status', 'region']),
-            models.Index(fields=['name', 'status']),
+            models.Index(fields=['status']),
+            models.Index(fields=['name']),
         ]
     
     def __str__(self):
@@ -157,12 +195,19 @@ class Company(models.Model):
     @property
     def full_address(self):
         """Return the full formatted address."""
-        parts = [
-            f"{self.street} {self.street_number}".strip(),
-            f"{self.postal_code} {self.city}".strip(),
-            self.country
-        ]
-        return ', '.join(filter(None, parts))
+        if self.address:
+            return self.address.full_address
+        return 'No address'
+    
+    @property
+    def city(self):
+        """Get city from address."""
+        return self.address.city if self.address else None
+    
+    @property
+    def region(self):
+        """Get region from address."""
+        return self.address.region if self.address else None
     
     @property
     def is_active(self):
@@ -195,12 +240,15 @@ class Establishment(models.Model):
     )
     name = models.CharField(_('establishment name'), max_length=255)
     
-    # Address
-    street = models.CharField(_('street'), max_length=255)
-    street_number = models.CharField(_('street number'), max_length=20)
-    city = models.CharField(_('city'), max_length=100)
-    postal_code = models.CharField(_('postal code'), max_length=10)
-    country = models.CharField(_('country'), max_length=2, default='BE')
+    # Address relation
+    address = models.OneToOneField(
+        Address,
+        on_delete=models.CASCADE,
+        related_name='establishment',
+        null=True,
+        blank=True,
+        verbose_name=_('address')
+    )
     
     # Details
     creation_date = models.DateField(_('creation date'), blank=True, null=True)
@@ -228,12 +276,79 @@ class Establishment(models.Model):
     @property
     def full_address(self):
         """Return the full formatted address."""
-        parts = [
-            f"{self.street} {self.street_number}".strip(),
-            f"{self.postal_code} {self.city}".strip(),
-            self.country
-        ]
-        return ', '.join(filter(None, parts))
+        return self.address.full_address if self.address else 'No address'
+    
+    @property
+    def city(self):
+        """Get city from address."""
+        return self.address.city if self.address else None
+
+
+class Activity(models.Model):
+    """Activity model for company's business activities and sectors."""
+    
+    # Relations
+    company = models.OneToOneField(
+        Company,
+        on_delete=models.CASCADE,
+        related_name='activities',
+        verbose_name=_('company')
+    )
+    
+    # Activity fields
+    nacebel_codes = models.JSONField(
+        _('NACEBEL codes'),
+        default=list,
+        blank=True,
+        help_text=_('List of NACEBEL activity codes')
+    )
+    company_activities = models.JSONField(
+        _('company activities'),
+        default=list,
+        blank=True,
+        help_text=_('List of company activities')
+    )
+    sectors = models.JSONField(
+        _('sectors'),
+        default=list,
+        blank=True,
+        help_text=_('List of business sectors')
+    )
+    services = models.JSONField(
+        _('services'),
+        default=list,
+        blank=True,
+        help_text=_('List of services offered')
+    )
+    
+    # Additional description
+    description = models.TextField(
+        _('activity description'),
+        blank=True,
+        help_text=_('Detailed description of company activities')
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('updated at'), auto_now=True)
+    
+    class Meta:
+        verbose_name = _('activity')
+        verbose_name_plural = _('activities')
+        db_table = 'company_activities'
+    
+    def __str__(self):
+        return f"{self.company.name} - Activities"
+    
+    @property
+    def primary_sector(self):
+        """Return the primary sector if available."""
+        return self.sectors[0] if self.sectors else None
+    
+    @property
+    def primary_nacebel(self):
+        """Return the primary NACEBEL code if available."""
+        return self.nacebel_codes[0] if self.nacebel_codes else None
 
 
 class FinancialData(models.Model):
