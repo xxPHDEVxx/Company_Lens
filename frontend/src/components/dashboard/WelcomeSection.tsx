@@ -1,4 +1,30 @@
+import { useQuery } from '@tanstack/react-query';
+import { companyApi, groupApi, recentSearchApi } from '../../services/api';
+
 const WelcomeSection = () => {
+  // Fetch followed companies count
+  const { data: followedCompanies } = useQuery({
+    queryKey: ['companies', 'followed'],
+    queryFn: () => companyApi.getFollowed(),
+  });
+
+  // Fetch groups count
+  const { data: groups } = useQuery({
+    queryKey: ['groups'],
+    queryFn: () => groupApi.getAll(),
+  });
+
+  // Fetch recent searches
+  const { data: recentSearches } = useQuery({
+    queryKey: ['recentSearches'],
+    queryFn: () => recentSearchApi.getAll(),
+  });
+
+  // Calculate statistics
+  const followedCount = followedCompanies?.length || 0;
+  const groupsCount = groups?.length || 0;
+  const searchesCount = recentSearches?.length || 0;
+
   return (
     <div className="mb-8">
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -17,12 +43,16 @@ const WelcomeSection = () => {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">127</p>
-                  <p className="text-sm font-medium text-gray-600">Entreprises suivies</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {followedCount}
+                  </p>
+                  <p className="text-sm font-medium text-gray-600">
+                    {followedCount === 1 ? 'Entreprise suivie' : 'Entreprises suivies'}
+                  </p>
                 </div>
               </div>
             </div>
-            {/* Recherches effectuées */}
+            {/* Recherches récentes */}
             <div className="text-center">
               <div className="flex items-center justify-center mb-2">
                 <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center mr-3">
@@ -31,8 +61,12 @@ const WelcomeSection = () => {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">2,341</p>
-                  <p className="text-sm font-medium text-gray-600">Recherches effectuées</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {searchesCount}
+                  </p>
+                  <p className="text-sm font-medium text-gray-600">
+                    {searchesCount === 1 ? 'Recherche récente' : 'Recherches récentes'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -45,8 +79,12 @@ const WelcomeSection = () => {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">15</p>
-                  <p className="text-sm font-medium text-gray-600">Groupes créés</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {groupsCount}
+                  </p>
+                  <p className="text-sm font-medium text-gray-600">
+                    {groupsCount === 1 ? 'Groupe créé' : 'Groupes créés'}
+                  </p>
                 </div>
               </div>
             </div>
