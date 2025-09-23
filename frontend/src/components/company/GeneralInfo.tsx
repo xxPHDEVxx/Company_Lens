@@ -9,7 +9,6 @@ interface GeneralInfoProps {
     capital: string;
     employees: number;
     naceCodes: string[];
-    activity: string;
     lastUpdate: string;
     companyType: string;
     companySize: string;
@@ -17,22 +16,37 @@ interface GeneralInfoProps {
   };
 }
 
+/**
+ * Component displaying general company information
+ * Shows company details like VAT, legal form, size, type, etc.
+ */
 const GeneralInfo: React.FC<GeneralInfoProps> = ({ info }) => {
-  const getCompanyTypeLabel = (type: string) => {
+  /**
+   * Maps company type codes to French labels
+   * Supports both new API format (UPPERCASE) and legacy format
+   */
+  const getCompanyTypeLabel = (type: string): string => {
+    if (!type || type === '-') return '-';
+    
     const types: Record<string, string> = {
-      'private-company': 'Société privée',
-      'public-company': 'Société publique',
-      'self-employed': 'Indépendant',
-      'for-profit': 'À but lucratif',
-      'non-profit': 'Sans but lucratif',
-      'educational-institution': 'Institution éducative',
-      'research-organization': 'Organisation de recherche',
-      'startup': 'Startup'
+      // API format
+      'PRIVATE': 'Société privée',
+      'PUBLIC': 'Société publique',
+      'NON_PROFIT': 'Sans but lucratif',
+      'GOVERNMENT': 'Gouvernementale',
+      'COOPERATIVE': 'Coopérative',
+      'SOLE_PROPRIETORSHIP': 'Entreprise individuelle',
+      'PARTNERSHIP': 'Partenariat',
     };
     return types[type] || type;
   };
 
-  const getCompanySizeLabel = (size: string) => {
+  /**
+   * Maps company size codes to French labels
+   */
+  const getCompanySizeLabel = (size: string): string => {
+    if (!size || size === '-') return '-';
+    
     const sizes: Record<string, string> = {
       'micro': 'Micro-entreprise',
       'small': 'Petite entreprise',
@@ -60,14 +74,22 @@ const GeneralInfo: React.FC<GeneralInfoProps> = ({ info }) => {
               <FileText className="w-5 h-5 text-gray-400 mt-0.5 mr-3" />
               <div>
                 <p className="text-sm text-gray-600">Forme juridique</p>
-                <p className="font-medium text-gray-900">{info.legalForm}</p>
+                <p className="font-medium text-gray-900">{info.legalForm || '-'}</p>
               </div>
             </div>
             <div className="flex items-start">
               <Calendar className="w-5 h-5 text-gray-400 mt-0.5 mr-3" />
               <div>
                 <p className="text-sm text-gray-600">Date de création</p>
-                <p className="font-medium text-gray-900">{info.creationDate}</p>
+                <p className="font-medium text-gray-900">
+                  {info.creationDate && info.creationDate !== '-' 
+                    ? new Date(info.creationDate).toLocaleDateString('fr-BE', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    : '-'}
+                </p>
               </div>
             </div>
             <div className="flex items-start">
@@ -98,13 +120,27 @@ const GeneralInfo: React.FC<GeneralInfoProps> = ({ info }) => {
               <div>
                 <p className="text-sm text-gray-600">Codes NACE</p>
                 <p className="font-medium text-gray-900">{info.naceCodes.join(', ')}</p>
-                <p className="text-sm text-gray-600 mt-1">{info.activity}</p>
               </div>
             </div>
           </div>
         </div>
         <div className="mt-6 pt-4 border-t border-gray-200">
-          <p className="text-sm text-gray-500">Dernière mise à jour: {info.lastUpdate}</p>
+          <p className="text-sm text-gray-500">
+            Dernière mise à jour: {
+              info.lastUpdate && info.lastUpdate !== '-' 
+                ? (() => {
+                    const date = new Date(info.lastUpdate);
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = date.getFullYear();
+                    const hours = String(date.getHours()).padStart(2, '0');
+                    const minutes = String(date.getMinutes()).padStart(2, '0');
+                    const seconds = String(date.getSeconds()).padStart(2, '0');
+                    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+                  })()
+                : '-'
+            }
+          </p>
         </div>
       </div>
 

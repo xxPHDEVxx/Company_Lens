@@ -6,8 +6,8 @@ interface CompanyHeaderProps {
     logo?: string;
     status: 'active' | 'inactive';
     vat: string;
-    legalForm: string;
-    creationDate: string;
+    legalForm?: string;
+    creationDate?: string;
     address?: {
       fullAddress?: string;
     };
@@ -63,16 +63,22 @@ const CompanyHeader = ({ company }: CompanyHeaderProps) => {
               </div>
               <div className="flex items-center">
                 <Calendar className="w-4 h-4 mr-1" />
-                <span>Créée le {company.creationDate}</span>
+                <span>
+                  Créée le {
+                    company.creationDate 
+                      ? new Date(company.creationDate).toLocaleDateString('fr-BE', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })
+                      : '-'
+                  }
+                </span>
               </div>
               <div className="flex items-center">
                 <MapPin className="w-4 h-4 mr-1" />
                 <span>{`${company.city || ''}`}</span>
               </div>
-            </div>
-            <div className="mt-2">
-              <span className="text-sm text-gray-600">Forme juridique: </span>
-              <span className="text-sm font-medium text-gray-900">{company.legalForm}</span>
             </div>
           </div>
         </div>

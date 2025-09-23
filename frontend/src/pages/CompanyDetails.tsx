@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Download, Share2, Star } from 'lucide-react';
+import { ArrowLeft, Download, Star } from 'lucide-react';
 import CompanyHeader from '../components/company/CompanyHeader';
 import GeneralInfo from '../components/company/GeneralInfo';
 import EstablishmentsList from '../components/company/EstablishmentsList';
 import ContactInfo from '../components/company/ContactInfo';
 import ActivitiesInfo from '../components/company/ActivitiesInfo';
 import FinancialCharts from '../components/company/FinancialCharts';
-import FinancialMetrics from '../components/company/FinancialMetrics';
+import  FinancialMetrics from '../components/company/FinancialMetrics';
 import { useCompany, useFollowCompany, useUnfollowCompany } from '../hooks/queries';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/common/Toast';
@@ -24,10 +24,19 @@ const CompanyDetails = () => {
   const sourcePage = location.state?.from || 'Suivi';
   const sourceRoute = location.state?.route || '/suivi';
 
-  // Use React Query hooks
-  const { data: company, isLoading, error } = useCompany(companyId);
+  // Use React Query hooks with refetchOnWindowFocus to ensure fresh data
+  const { data: company, isLoading, error, refetch } = useCompany(companyId);
   const followMutation = useFollowCompany();
   const unfollowMutation = useUnfollowCompany();
+  
+  // Refetch on window focus to ensure we always have the latest data
+  useEffect(() => {
+    const handleFocus = () => {
+      refetch();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refetch]);
 
   // Handle follow/unfollow
   const handleFollowToggle = async () => {
@@ -120,10 +129,11 @@ const CompanyDetails = () => {
     );
   }
 
+  // Map company data (now always in camelCase)
   const generalInfo = {
     vat: company.vat,
-    legalForm: company.legalForm,
-    creationDate: company.creationDate,
+    legalForm: company.legalForm || '-',
+    creationDate: company.creationDate || '-',
     capital: company.capital || '-',
     employees: company.employees || 0,
     naceCodes: company.activities?.nacebelCodes || [],
@@ -132,7 +142,7 @@ const CompanyDetails = () => {
     lastUpdate: company.lastUpdate || '-',
     companyType: company.companyType || '-',
     companySize: company.companySize || '-',
-    companyDescription: '',
+    companyDescription: company.activities?.description || '',
   };
 
   const contactInfo = {
@@ -177,9 +187,6 @@ const CompanyDetails = () => {
                   className="w-5 h-5" 
                   fill={company?.is_followed ? 'currentColor' : 'none'}
                 />
-              </button>
-              <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
-                <Share2 className="w-5 h-5" />
               </button>
               <button className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                 <Download className="w-4 h-4 mr-2" />

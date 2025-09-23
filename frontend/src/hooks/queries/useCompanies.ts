@@ -27,6 +27,8 @@ export const useCompany = (id: string | undefined) => {
     queryKey: queryKeys.companies.detail(id!),
     queryFn: () => companyApi.getById(id!),
     enabled: !!id,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 };
 

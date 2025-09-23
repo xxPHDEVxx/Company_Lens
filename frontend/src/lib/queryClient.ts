@@ -17,9 +17,9 @@ export const queryClient = new QueryClient({
       },
       // Retry delay with exponential backoff
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      // Refetch on window focus
-      refetchOnWindowFocus: false,
-      // Don't refetch on reconnect by default
+      // Refetch on window focus for fresh data
+      refetchOnWindowFocus: true,
+      // Refetch on reconnect
       refetchOnReconnect: 'always',
     },
     mutations: {
