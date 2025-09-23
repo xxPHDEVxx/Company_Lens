@@ -20,7 +20,8 @@ from .serializers import (
     EstablishmentSerializer,
     FinancialDataSerializer,
     CompanyFollowerSerializer,
-    CompanyStatisticsSerializer
+    CompanyStatisticsSerializer,
+    FollowedCompanySerializer
 )
 
 
@@ -311,15 +312,14 @@ class CompanyViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def followed(self, request):
         """
-        Get companies followed by the current user.
+        Get companies followed by the current user with follow metadata.
         """
         followed = CompanyFollower.objects.filter(
             user=request.user
-        ).select_related('company')
+        ).select_related('company').order_by('-followed_since')
         
-        companies = [f.company for f in followed]
-        serializer = CompanyListSerializer(
-            companies,
+        serializer = FollowedCompanySerializer(
+            followed,
             many=True,
             context={'request': request}
         )
