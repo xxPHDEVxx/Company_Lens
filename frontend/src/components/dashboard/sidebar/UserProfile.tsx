@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { authApi } from '../../../services/api';
 
 interface UserProfileProps {
   isCollapsed: boolean;
@@ -10,6 +12,12 @@ const UserProfile: React.FC<UserProfileProps> = ({ isCollapsed, onLogout }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  // Fetch current user data
+  const { data: user } = useQuery({
+    queryKey: ['user', 'current'],
+    queryFn: () => authApi.getCurrentUser(),
+  });
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -29,6 +37,16 @@ const UserProfile: React.FC<UserProfileProps> = ({ isCollapsed, onLogout }) => {
     onLogout();
   };
 
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (!user?.name) return '?';
+    const names = user.name.split(' ');
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[1][0]}`.toUpperCase();
+    }
+    return user.name.substring(0, 2).toUpperCase();
+  };
+
   return (
     <div className={`border-t border-slate-700/50 ${isCollapsed ? 'px-3 py-3' : 'p-4'}`}>
       <div className="relative group" ref={dropdownRef}>
@@ -40,15 +58,21 @@ const UserProfile: React.FC<UserProfileProps> = ({ isCollapsed, onLogout }) => {
           title={isCollapsed ? 'Profil utilisateur' : ''}
         >
           {/* Avatar Container - Always in fixed position */}
-          <UserAvatar />
+          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0">
+            <span className="text-white text-sm font-semibold">{getUserInitials()}</span>
+          </div>
           
           {/* User Info Container - Smooth transition */}
           <div className={`overflow-hidden transition-all duration-300 ${
             isCollapsed ? 'w-0 ml-0 opacity-0' : 'w-auto ml-3 opacity-100'
           }`}>
             <div className="text-left flex-1">
-              <p className="text-sm font-medium text-white whitespace-nowrap">Utilisateur</p>
-              <p className="text-xs text-slate-400 whitespace-nowrap">user@example.com</p>
+              <p className="text-sm font-medium text-white whitespace-nowrap">
+                {user?.name || 'Utilisateur'}
+              </p>
+              <p className="text-xs text-slate-400 whitespace-nowrap truncate max-w-[150px]">
+                {user?.email || 'user@example.com'}
+              </p>
             </div>
           </div>
           
@@ -89,14 +113,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ isCollapsed, onLogout }) => {
     </div>
   );
 };
-
-const UserAvatar: React.FC = () => (
-  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0">
-    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  </div>
-);
 
 interface UserDropdownProps {
   isCollapsed: boolean;

@@ -28,10 +28,12 @@ export const LogoutProvider = ({ children }: { children: ReactNode }) => {
   const confirmLogout = async () => {
     try {
       await authApi.logout();
+      setIsModalOpen(false); // Close modal before navigating
       navigate('/login');
     } catch (error) {
       // Even if logout fails, clear token and redirect
       localStorage.removeItem('authToken');
+      setIsModalOpen(false); // Close modal before navigating
       navigate('/login');
     }
   };
