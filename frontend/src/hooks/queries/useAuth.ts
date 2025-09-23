@@ -16,6 +16,16 @@ export const useCurrentUser = () => {
   });
 };
 
+// Get user's company
+export const useUserCompany = () => {
+  return useQuery({
+    queryKey: ['user', 'company'],
+    queryFn: authApi.getUserCompany,
+    retry: false,
+    enabled: !!localStorage.getItem('authToken'),
+  });
+};
+
 // Mutation Hooks
 
 // Login

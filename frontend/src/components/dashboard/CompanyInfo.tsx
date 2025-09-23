@@ -1,17 +1,44 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser, useCompany } from '../../hooks/queries';
 import { CompanyMetric, CompanyPerformance, CompanyLoadingState, CompanyErrorState } from './company-info';
+import CompanyEditModal from './CompanyEditModal';
+import { authApi } from '../../services/api';
 
+/**
+ * Dashboard component displaying user's company information
+ * Provides edit and remove functionality for the associated company
+ */
 const CompanyInfo = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
-  // Use React Query hooks
+  // Modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+  
+  // Fetch user and company data
   const { data: currentUser, isLoading: userLoading } = useCurrentUser();
-  const { data: company, isLoading: companyLoading, error: companyError } = useCompany(currentUser?.companyId);
+  const { data: company, isLoading: companyLoading, error: companyError, refetch: refetchCompany } = useCompany(currentUser?.companyId);
   
+  // Derived states
   const loading = userLoading || companyLoading;
-  const error = !currentUser?.companyId ? 'Aucune entreprise associée à votre compte' : 
-                 companyError ? 'Erreur lors du chargement des données' : null;
+  const error = !currentUser?.companyId 
+    ? 'Aucune entreprise associée à votre compte' 
+    : companyError 
+      ? 'Erreur lors du chargement des données' 
+      : null;
+  
+  // Mutation to remove company association
+  const removeMutation = useMutation({
+    mutationFn: authApi.removeUserCompany,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user', 'current'] });
+      queryClient.invalidateQueries({ queryKey: ['user', 'company'] });
+      setShowRemoveConfirm(false);
+    },
+  });
   
   const handleViewDetails = () => {
     if (company) {
@@ -35,8 +62,32 @@ const CompanyInfo = () => {
   return (
     <div className="mb-8">
       <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl p-8">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Votre entreprise</h3>
-        <p className="text-gray-600 mb-8">Informations de votre entreprise principale</p>
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Votre entreprise</h3>
+            <p className="text-gray-600 mt-1">Informations de votre entreprise principale</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Modifier"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setShowRemoveConfirm(true)}
+              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="Retirer"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - General Information */}
@@ -123,6 +174,52 @@ const CompanyInfo = () => {
           </button>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {showEditModal && company && (
+        <CompanyEditModal
+          key={`${company.id}-${company.updated_at || Date.now()}`}
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            // Refetch company data and invalidate related queries with correct key structure
+            refetchCompany();
+            queryClient.invalidateQueries({ queryKey: ['companies', 'detail', company.id] });
+            queryClient.invalidateQueries({ queryKey: ['user', 'company'] });
+          }}
+          company={company}
+        />
+      )}
+
+      {/* Remove Confirmation Modal */}
+      {showRemoveConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Retirer l'entreprise de votre compte ?
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Cette action retirera l'association entre votre compte et l'entreprise {company?.name}.
+              Vous devrez associer une nouvelle entreprise pour accéder aux fonctionnalités de l'application.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowRemoveConfirm(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleRemove}
+                disabled={removeMutation.isPending}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-400"
+              >
+                {removeMutation.isPending ? 'Retrait...' : 'Retirer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

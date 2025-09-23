@@ -11,6 +11,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView as BaseTokenRefreshView
 from django.contrib.auth import authenticate, get_user_model
 from django.utils.translation import gettext_lazy as _
+from companies.models import Company
+from companies.serializers import CompanyDetailSerializer
 from .serializers import (
     LoginSerializer,
     SignupSerializer,
@@ -224,5 +226,128 @@ class VerifyEmailView(APIView):
         # For now, just return success
         return Response(
             {'message': _('Email verified successfully.')},
+            status=status.HTTP_200_OK
+        )
+
+
+class UserCompanyView(APIView):
+    """
+    Manage user's associated company.
+    Allows updating limited fields and removing the company association.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def _update_company_activities(self, company, activities_data):
+        """Helper method to update or create company activities"""
+        from companies.models import Activity
+        
+        if hasattr(company, 'activities'):
+            activity = company.activities
+            # Update main activity (stored as first item in sectors)
+            if 'main_activity' in activities_data:
+                existing_sectors = activity.sectors or []
+                if existing_sectors:
+                    existing_sectors[0] = activities_data['main_activity']
+                else:
+                    existing_sectors = [activities_data['main_activity']]
+                activity.sectors = existing_sectors
+            
+            # Update other fields
+            if 'secondary_activities' in activities_data:
+                activity.company_activities = activities_data['secondary_activities']
+            if 'nacebel_codes' in activities_data:
+                activity.nacebel_codes = activities_data['nacebel_codes']
+            if 'description' in activities_data:
+                activity.description = activities_data['description']
+            activity.save()
+        else:
+            # Create new activity
+            Activity.objects.create(
+                company=company,
+                sectors=[activities_data.get('main_activity', '')] if activities_data.get('main_activity') else [],
+                company_activities=activities_data.get('secondary_activities', []),
+                nacebel_codes=activities_data.get('nacebel_codes', []),
+                description=activities_data.get('description', '')
+            )
+    
+    def get(self, request):
+        """Get the user's associated company details."""
+        if not request.user.company_id:
+            return Response(
+                {'message': _('No company associated with this user.')},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            company = Company.objects.get(id=request.user.company_id)
+            serializer = CompanyDetailSerializer(company)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Company.DoesNotExist:
+            return Response(
+                {'message': _('Company not found.')},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    def patch(self, request):
+        """
+        Update user's company.
+        Allows updating all fields except VAT number.
+        Handles nested objects for activities, address, and contact.
+        """
+        if not request.user.company_id:
+            return Response(
+                {'message': _('No company associated with this user.')},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
+            company = Company.objects.get(id=request.user.company_id)
+            
+            # Remove VAT number fields (not allowed to change)
+            update_data = request.data.copy()
+            vat_fields = ['vat_number', 'vatNumber', 'vat']
+            for field in vat_fields:
+                update_data.pop(field, None)
+            
+            # Handle activities nested data
+            if 'activities' in update_data:
+                activities_data = update_data.pop('activities')
+                self._update_company_activities(company, activities_data)
+            
+            # Update company fields using the serializer for validation
+            from companies.serializers import CompanyCreateUpdateSerializer
+            serializer = CompanyCreateUpdateSerializer(company, data=update_data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            
+            # Refresh from DB and return with detail serializer
+            company.refresh_from_db()
+            detail_serializer = CompanyDetailSerializer(company)
+            return Response(detail_serializer.data, status=status.HTTP_200_OK)
+        except Company.DoesNotExist:
+            return Response(
+                {'message': _('Company not found.')},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    def delete(self, request):
+        """Remove the company association from the user (not delete the company itself)."""
+        if not request.user.company_id:
+            return Response(
+                {'message': _('No company associated with this user.')},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Remove company association
+        request.user.company_id = None
+        request.user.save()
+        
+        # Return updated user data
+        serializer = UserSerializer(request.user)
+        return Response(
+            {
+                'message': _('Company association removed successfully.'),
+                'user': serializer.data
+            },
             status=status.HTTP_200_OK
         )
