@@ -4,11 +4,12 @@ import { MapPin, Phone, Mail, Globe } from 'lucide-react';
 interface ContactInfoProps {
   contact: {
     address: {
-      street: string;
-      streetNumber: string;
-      city: string;
-      postalCode: string;
-      country: string;
+      street?: string;
+      streetNumber?: string;
+      city?: string;
+      postalCode?: string;
+      country?: string;
+      fullAddress?: string;
     };
     phone?: string;
     email?: string;
@@ -30,11 +31,25 @@ const ContactInfo = ({ contact }: ContactInfoProps) => {
               <div className="flex items-start">
                 <MapPin className="w-5 h-5 text-gray-400 mt-0.5 mr-3" />
                 <div>
-                  <p className="text-sm text-gray-600">{contact.address.street} {contact.address.streetNumber}</p>
-                  <p className="text-sm text-gray-600">
-                    {contact.address.postalCode} {contact.address.city}
-                  </p>
-                  <p className="text-sm text-gray-600">{contact.address.country}</p>
+                  {contact.address?.fullAddress ? (
+                    <p className="text-sm text-gray-600">{contact.address.fullAddress}</p>
+                  ) : (
+                    <>
+                      {(contact.address?.street || contact.address?.streetNumber) && (
+                        <p className="text-sm text-gray-600">
+                          {contact.address?.street} {contact.address?.streetNumber}
+                        </p>
+                      )}
+                      {(contact.address?.postalCode || contact.address?.city) && (
+                        <p className="text-sm text-gray-600">
+                          {contact.address?.postalCode} {contact.address?.city}
+                        </p>
+                      )}
+                      {contact.address?.country && (
+                        <p className="text-sm text-gray-600">{contact.address.country}</p>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>

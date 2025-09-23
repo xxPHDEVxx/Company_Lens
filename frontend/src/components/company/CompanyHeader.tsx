@@ -8,7 +8,11 @@ interface CompanyHeaderProps {
     vat: string;
     legalForm: string;
     creationDate: string;
-    mainAddress: string;
+    address?: {
+      fullAddress?: string;
+    };
+    city?: string;
+    region?: string;
   };
 }
 
@@ -63,7 +67,7 @@ const CompanyHeader = ({ company }: CompanyHeaderProps) => {
               </div>
               <div className="flex items-center">
                 <MapPin className="w-4 h-4 mr-1" />
-                <span>{company.mainAddress}</span>
+                <span>{`${company.city || ''}`}</span>
               </div>
             </div>
             <div className="mt-2">

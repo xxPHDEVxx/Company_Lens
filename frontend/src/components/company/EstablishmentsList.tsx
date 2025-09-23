@@ -5,15 +5,16 @@ interface Establishment {
   id: string;
   unitNumber: string;
   name: string;
-  address: {
-    street: string;
-    streetNumber: string;
-    city: string;
-    postalCode: string;
-    country: string;
+  address?: {
+    street?: string;
+    streetNumber?: string;
+    city?: string;
+    postalCode?: string;
+    country?: string;
+    fullAddress?: string;
   };
-  creationDate: string;
-  status: 'active' | 'inactive';
+  creationDate?: string;
+  status: 'active' | 'inactive' | 'closed';
 }
 
 interface EstablishmentsListProps {
@@ -21,7 +22,6 @@ interface EstablishmentsListProps {
 }
 
 const EstablishmentsList: React.FC<EstablishmentsListProps> = ({ establishments }) => {
-
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -50,9 +50,12 @@ const EstablishmentsList: React.FC<EstablishmentsListProps> = ({ establishments 
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   establishment.status === 'active' 
                     ? 'bg-green-100 text-green-800' 
+                    : establishment.status === 'closed'
+                    ? 'bg-red-100 text-red-800'
                     : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {establishment.status === 'active' ? 'Actif' : 'Inactif'}
+                  {establishment.status === 'active' ? 'Actif' : 
+                   establishment.status === 'closed' ? 'Fermé' : 'Inactif'}
                 </span>
               </div>
             </div>
