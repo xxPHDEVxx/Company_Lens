@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { authApi } from '../services/api';
+import type { User } from '../types/api';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requireCompany?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  requireCompany = true 
+}) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const location = useLocation();
 
@@ -23,7 +29,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
       try {
         // Verify token by getting current user
-        await authApi.getCurrentUser();
+        const userData = await authApi.getCurrentUser();
+        setUser(userData);
         setIsAuthenticated(true);
       } catch (error) {
         // Token is invalid or expired
@@ -52,6 +59,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   if (!isAuthenticated) {
     // Redirect to login page but save the attempted location
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Check if company is required and user doesn't have one
+  const hasCompany = user?.companyId && user.companyId !== '';
+  const isDashboard = location.pathname === '/dashboard';
+  
+  if (requireCompany && !hasCompany && !isDashboard) {
+    // Redirect to dashboard if trying to access other pages without a company
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

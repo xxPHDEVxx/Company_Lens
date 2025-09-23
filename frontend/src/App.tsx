@@ -51,7 +51,7 @@ function AppContent() {
           </main>
         } />
         <Route path="/dashboard" element={
-          <ProtectedRoute>
+          <ProtectedRoute requireCompany={false}>
             <Dashboard />
           </ProtectedRoute>
         } />
