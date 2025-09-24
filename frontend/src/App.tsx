@@ -16,7 +16,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { SidebarProvider } from './contexts/SidebarContext';
 import { LogoutProvider } from './contexts/LogoutContext';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+// import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/queryClient';
 
 function AppContent() {
@@ -110,7 +110,7 @@ function App() {
           </LogoutProvider>
         </SidebarProvider>
       </Router>
-      <ReactQueryDevtools initialIsOpen={false} />
+      {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
   );
 }
