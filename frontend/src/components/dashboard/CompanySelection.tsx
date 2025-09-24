@@ -46,8 +46,16 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
       setError('');
       // Update user data in cache and invalidate all user queries
       queryClient.setQueryData(['user', 'current'], data);
-      // This will refresh all components that use the user query
-      queryClient.invalidateQueries({ queryKey: ['user', 'current'] });
+      
+      // Invalidate all relevant queries to force refresh
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['auth'] });
+      
+      // Force refetch the company data if the user has a company
+      if (data.companyId) {
+        queryClient.invalidateQueries({ queryKey: ['companies', 'detail', data.companyId] });
+      }
       
       // Call callback after a short delay to show success message
       setTimeout(() => {
