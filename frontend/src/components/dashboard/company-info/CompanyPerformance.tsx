@@ -1,3 +1,5 @@
+import React from 'react';
+
 interface FinancialData {
   year: number;
   revenue: number;
@@ -21,12 +23,39 @@ const CompanyPerformance: React.FC<CompanyPerformanceProps> = ({
   previousFinancialData,
   financialMetrics
 }) => {
+  // Calculate revenue growth from actual data
+  const calculateRevenueGrowth = () => {
+    if (latestFinancialData?.revenue && previousFinancialData?.revenue) {
+      const growth = ((latestFinancialData.revenue - previousFinancialData.revenue) / previousFinancialData.revenue) * 100;
+      return growth;
+    }
+    return financialMetrics?.revenue?.growth || 0;
+  };
+
+  // Calculate financial stability based on profit margin consistency
+  const calculateFinancialStability = () => {
+    if (latestFinancialData?.profit != null && latestFinancialData?.revenue) {
+      const profitMargin = (latestFinancialData.profit / latestFinancialData.revenue) * 100;
+      // Convert profit margin to stability score (0-100)
+      // Positive margin = higher stability
+      if (profitMargin > 0) {
+        return Math.min(100, 50 + profitMargin * 2);
+      } else {
+        return Math.max(0, 50 + profitMargin);
+      }
+    }
+    return 50; // Default neutral stability
+  };
+
   return (
     <div className="space-y-6">
       <h4 className="text-lg font-semibold text-gray-900">Performance & Évolution</h4>
       
       {/* Growth Indicators */}
-      <GrowthIndicators financialMetrics={financialMetrics} />
+      <GrowthIndicators 
+        revenueGrowth={calculateRevenueGrowth()}
+        financialStability={calculateFinancialStability()}
+      />
       
       {/* Year Comparison */}
       <YearComparison 
@@ -37,7 +66,10 @@ const CompanyPerformance: React.FC<CompanyPerformanceProps> = ({
   );
 };
 
-const GrowthIndicators: React.FC<{ financialMetrics?: FinancialMetrics }> = ({ financialMetrics }) => (
+const GrowthIndicators: React.FC<{ 
+  revenueGrowth: number;
+  financialStability: number;
+}> = ({ revenueGrowth, financialStability }) => (
   <div className="bg-white p-4 rounded-xl shadow-sm">
     <div className="flex items-center space-x-2 mb-4">
       <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,15 +80,15 @@ const GrowthIndicators: React.FC<{ financialMetrics?: FinancialMetrics }> = ({ f
     <div className="space-y-3">
       <ProgressBar 
         label="Croissance annuelle"
-        value={financialMetrics?.revenue.growth || 0}
-        displayValue={financialMetrics?.revenue.growth ? `${financialMetrics.revenue.growth.toFixed(1)}%` : '0%'}
-        color="from-blue-500 to-blue-600"
+        value={Math.min(100, Math.abs(revenueGrowth))}
+        displayValue={`${revenueGrowth > 0 ? '+' : ''}${revenueGrowth.toFixed(1)}%`}
+        color={revenueGrowth >= 0 ? "from-green-500 to-green-600" : "from-red-500 to-red-600"}
       />
       <ProgressBar 
         label="Stabilité financière"
-        value={92}
-        displayValue="92%"
-        color="from-green-500 to-green-600"
+        value={financialStability}
+        displayValue={`${financialStability.toFixed(0)}%`}
+        color={financialStability >= 70 ? "from-green-500 to-green-600" : financialStability >= 40 ? "from-yellow-500 to-yellow-600" : "from-red-500 to-red-600"}
       />
     </div>
   </div>
