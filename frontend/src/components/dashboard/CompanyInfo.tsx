@@ -34,11 +34,18 @@ const CompanyInfo = () => {
   const removeMutation = useMutation({
     mutationFn: authApi.removeUserCompany,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user', 'current'] });
-      queryClient.invalidateQueries({ queryKey: ['user', 'company'] });
+      // Clear all company-related caches
+      queryClient.removeQueries({ queryKey: ['companies'] });
+      // Invalidate user queries to update the UI
+      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.invalidateQueries({ queryKey: ['auth'] });
       setShowRemoveConfirm(false);
     },
   });
+  
+  const handleRemove = () => {
+    removeMutation.mutate();
+  };
   
   const handleViewDetails = () => {
     if (company) {
@@ -56,8 +63,12 @@ const CompanyInfo = () => {
     return <CompanyErrorState error={error} />;
   }
 
-  const latestFinancialData = company.financialData?.[company.financialData.length - 1];
-  const previousFinancialData = company.financialData?.[company.financialData.length - 2];
+  // Sort financial data by year to ensure correct order (latest year first)
+  const sortedFinancialData = company.financialData ? 
+    [...company.financialData].sort((a, b) => b.year - a.year) : [];
+  
+  const latestFinancialData = sortedFinancialData[0];
+  const previousFinancialData = sortedFinancialData[1];
 
   return (
     <div className="mb-8">
