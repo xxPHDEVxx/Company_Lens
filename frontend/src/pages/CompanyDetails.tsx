@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Download, Star } from 'lucide-react';
 import CompanyHeader from '../components/company/CompanyHeader';
 import GeneralInfo from '../components/company/GeneralInfo';
@@ -17,8 +17,18 @@ const CompanyDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toasts, removeToast, success, error: showError } = useToast();
-  
-  const [activeTab, setActiveTab] = useState('general');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Get active tab from URL or default to 'general'
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'general');
+
+  // Update URL when tab changes
+  useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    if (currentTab !== activeTab) {
+      setSearchParams({ tab: activeTab }, { replace: true });
+    }
+  }, [activeTab, searchParams, setSearchParams]);
   
   // Determine the source page from location state or default to 'Suivi'
   const sourcePage = location.state?.from || 'Suivi';

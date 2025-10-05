@@ -10,7 +10,11 @@ interface GroupOverviewProps {
 const GroupOverview: React.FC<GroupOverviewProps> = ({ group, companies }) => {
   // Calculate statistics from companies
   const totalEmployees = companies.reduce((sum, company) => sum + (company.employees || 0), 0);
-  const uniqueSectors = new Set(companies.map(c => c.sector).filter(Boolean)).size;
+  const uniqueSectors = new Set(
+    companies
+      .map(c => c.activities?.sectors?.[0])
+      .filter(Boolean)
+  ).size;
   const activeCompanies = companies.filter(c => c.status === 'active').length;
   const primaryRegion = companies.length > 0 ? getMostCommonRegion(companies) : 'N/A';
   
@@ -73,7 +77,7 @@ const GroupOverview: React.FC<GroupOverviewProps> = ({ group, companies }) => {
             <div className="flex items-start">
               <BarChart3 className="w-5 h-5 text-gray-400 mt-0.5 mr-3" />
               <div>
-                <p className="text-sm text-gray-600">Performance moyenne</p>
+                <p className="text-sm text-gray-600">Activité</p>
                 <p className="font-medium text-gray-900">{activeCompanies > 0 ? 'En activité' : 'N/A'}</p>
               </div>
             </div>

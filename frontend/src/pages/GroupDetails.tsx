@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Download, Share2, Star } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import GroupHeader from '../components/groupes/GroupHeader';
@@ -15,8 +15,18 @@ const GroupDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  
-  const [activeTab, setActiveTab] = useState('overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Get active tab from URL or default to 'overview'
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
+
+  // Update URL when tab changes
+  useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    if (currentTab !== activeTab) {
+      setSearchParams({ tab: activeTab }, { replace: true });
+    }
+  }, [activeTab, searchParams, setSearchParams]);
   
   // Determine the source page from location state or default to 'Groupes'
   const sourcePage = location.state?.from || 'Groupes';
