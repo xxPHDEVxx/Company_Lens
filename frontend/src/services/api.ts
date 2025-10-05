@@ -74,8 +74,8 @@ export const companyApi = {
     Object.entries(filters).forEach(([key, value]) => {
       if (value) params.append(key, value);
     });
-    
-    const response = await fetch(`${API_BASE_URL}/companies/search?${params}`, {
+
+    const response = await fetch(`${API_BASE_URL}/companies/search/?${params}`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to search companies');

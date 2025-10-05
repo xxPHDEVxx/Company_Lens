@@ -41,22 +41,27 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
       
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setSuccess(true);
       setError('');
       // Update user data in cache and invalidate all user queries
       queryClient.setQueryData(['user', 'current'], data);
-      
+
       // Invalidate all relevant queries to force refresh
-      queryClient.invalidateQueries({ queryKey: ['user'] });
-      queryClient.invalidateQueries({ queryKey: ['companies'] });
-      queryClient.invalidateQueries({ queryKey: ['auth'] });
-      
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['user'] }),
+        queryClient.invalidateQueries({ queryKey: ['companies'] }),
+        queryClient.invalidateQueries({ queryKey: ['auth'] }),
+      ]);
+
+      // Force refetch the user data immediately to update auth context
+      await queryClient.refetchQueries({ queryKey: ['auth', 'user'] });
+
       // Force refetch the company data if the user has a company
       if (data.companyId) {
-        queryClient.invalidateQueries({ queryKey: ['companies', 'detail', data.companyId] });
+        await queryClient.refetchQueries({ queryKey: ['companies', 'detail', data.companyId] });
       }
-      
+
       // Call callback after a short delay to show success message
       setTimeout(() => {
         if (onCompanySelected) {
