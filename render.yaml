@@ -38,6 +38,16 @@ services:
           type: redis
           name: company-lens-redis
           property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: company-lens-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: company-lens-redis
+          property: connectionString
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
@@ -54,7 +64,7 @@ services:
     plan: free
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    dockerCommand: celery -A company_lens worker --loglevel=info --concurrency=2 --queues=default,scraper,priority
+    dockerCommand: celery -A company_lens worker --loglevel=info --concurrency=1 --queues=default,scraper,priority
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -75,6 +85,8 @@ services:
           type: redis
           name: company-lens-redis
           property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
 
   # React Frontend
   - type: web
@@ -83,3 +95,9 @@ services:
     plan: free
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: company-lens-backend
+          envVarKey: RENDER_EXTERNAL_URL

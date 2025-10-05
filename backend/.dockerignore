@@ -50,8 +50,11 @@ logs/
 *.log
 
 # Environment
+.env
 .env.local
 .env.*.local
+.env.development
+.env.production
 
 # Media and static (will be collected in container)
 staticfiles/
