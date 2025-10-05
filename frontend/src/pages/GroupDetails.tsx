@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Download, Share2, Star } from 'lucide-react';
+import { ArrowLeft, Download } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import GroupHeader from '../components/groupes/GroupHeader';
 import GroupOverview from '../components/groupes/GroupOverview';
@@ -134,26 +134,20 @@ const GroupDetails = () => {
       {/* Top Navigation */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
+          <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
+            <div className="flex items-center min-w-0">
               <button
                 onClick={() => navigate(sourceRoute)}
                 className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                <span>{sourcePage}</span>
+                <ArrowLeft className="w-5 h-5 mr-1 sm:mr-2 flex-shrink-0" />
+                <span className="text-sm sm:text-base truncate">{sourcePage}</span>
               </button>
             </div>
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
-                <Star className="w-5 h-5" />
-              </button>
-              <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
-                <Share2 className="w-5 h-5" />
-              </button>
-              <button className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                <Download className="w-4 h-4 mr-2" />
-                <span>Exporter</span>
+            <div className="flex items-center">
+              <button className="flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs sm:text-sm">
+                <Download className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Exporter</span>
               </button>
             </div>
           </div>
@@ -161,15 +155,14 @@ const GroupDetails = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Group Header */}
-        <GroupHeader 
+        <GroupHeader
           group={{
             ...group,
             companiesCount: companies.length, // Use actual companies array length for accurate count
-            updatedAt: group.updatedAt || group.createdAt
-          }} 
-          getGroupIcon={getGroupIcon} 
+          }}
+          getGroupIcon={getGroupIcon}
         />
 
         {/* Tabs */}
@@ -180,7 +173,7 @@ const GroupDetails = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex-1 px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors ${
                     activeTab === tab.id
                       ? 'text-purple-600 border-purple-600'
                       : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
