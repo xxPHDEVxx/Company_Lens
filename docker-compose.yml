@@ -1,0 +1,193 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: company_lens_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: company_lens
+      POSTGRES_USER: company_lens_user
+      POSTGRES_PASSWORD: company_lens_password
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U company_lens_user -d company_lens"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - company_lens_network
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: company_lens_rabbitmq
+    ports:
+      - "5672:5672"     # AMQP port
+      - "15672:15672"   # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_VHOST: company_lens
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - company_lens_network
+
+  # Redis Cache & Result Backend
+  redis:
+    image: redis:7.2-alpine
+    container_name: company_lens_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - company_lens_network
+
+  # Django Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: company_lens_backend
+    command: gunicorn company_lens.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://company_lens_user:company_lens_password@db:5432/company_lens
+      - CELERY_BROKER_URL=amqp://admin:admin123@rabbitmq:5672/company_lens
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_ALWAYS_EAGER=False
+      - REDIS_URL=redis://redis:6379/1
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - company_lens_network
+    restart: unless-stopped
+
+  # Celery Worker
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: company_lens_celery_worker
+    command: celery -A company_lens worker --loglevel=info --concurrency=4 --queues=default,scraper,priority
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://company_lens_user:company_lens_password@db:5432/company_lens
+      - CELERY_BROKER_URL=amqp://admin:admin123@rabbitmq:5672/company_lens
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_ALWAYS_EAGER=False
+      - REDIS_URL=redis://redis:6379/1
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - company_lens_network
+    restart: unless-stopped
+
+  # Celery Beat Scheduler
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: company_lens_celery_beat
+    command: celery -A company_lens beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://company_lens_user:company_lens_password@db:5432/company_lens
+      - CELERY_BROKER_URL=amqp://admin:admin123@rabbitmq:5672/company_lens
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CELERY_ALWAYS_EAGER=False
+      - REDIS_URL=redis://redis:6379/1
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - company_lens_network
+    restart: unless-stopped
+
+  # Flower - Celery Monitoring
+  flower:
+    image: mher/flower:2.0
+    container_name: company_lens_flower
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: amqp://admin:admin123@rabbitmq:5672/company_lens
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      FLOWER_PORT: 5555
+    depends_on:
+      - rabbitmq
+      - redis
+    networks:
+      - company_lens_network
+    command: celery --broker=amqp://admin:admin123@rabbitmq:5672/company_lens flower
+    restart: unless-stopped
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: company_lens_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - company_lens_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  rabbitmq_log:
+  redis_data:
+  static_volume:
+  media_volume:
+
+networks:
+  company_lens_network:
+    driver: bridge
