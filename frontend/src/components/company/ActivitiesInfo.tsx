@@ -8,31 +8,31 @@ interface ActivitiesInfoProps {
 const ActivitiesInfo = ({ activities }: ActivitiesInfoProps) => {
   if (!activities) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold mb-4">Activités</h2>
+      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+        <h2 className="text-lg sm:text-xl font-semibold mb-4">Activités</h2>
         <div className="text-center py-8">
-          <p className="text-gray-500">Aucune information sur les activités disponible</p>
+          <p className="text-sm sm:text-base text-gray-500">Aucune information sur les activités disponible</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* NACEBEL Codes */}
       {activities.nacebelCodes && activities.nacebelCodes.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
           <div className="flex items-center mb-4">
-            <Hash className="w-6 h-6 text-indigo-600 mr-2" />
-            <h2 className="text-xl font-semibold">Codes NACEBEL</h2>
+            <Hash className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 mr-2 flex-shrink-0" />
+            <h2 className="text-lg sm:text-xl font-semibold">Codes NACEBEL</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             {activities.nacebelCodes.map((code, index) => (
               <span
                 key={index}
-                className={`px-3 py-1 rounded-full text-sm ${
-                  index === 0 
-                    ? 'bg-indigo-100 text-indigo-800 font-medium' 
+                className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm ${
+                  index === 0
+                    ? 'bg-indigo-100 text-indigo-800 font-medium'
                     : 'bg-gray-100 text-gray-700'
                 }`}
               >
@@ -46,10 +46,10 @@ const ActivitiesInfo = ({ activities }: ActivitiesInfoProps) => {
 
       {/* Sectors */}
       {activities.sectors && activities.sectors.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
           <div className="flex items-center mb-4">
-            <Building2 className="w-6 h-6 text-indigo-600 mr-2" />
-            <h2 className="text-xl font-semibold">Secteurs d'activité</h2>
+            <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 mr-2 flex-shrink-0" />
+            <h2 className="text-lg sm:text-xl font-semibold">Secteurs d'activité</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {activities.sectors.map((sector, index) => (

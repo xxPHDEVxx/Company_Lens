@@ -19,10 +19,10 @@ interface ContactInfoProps {
 
 const ContactInfo = ({ contact }: ContactInfoProps) => {
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Informations de Contact</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+      <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Informations de Contact</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* Addresses */}
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3">Adresse</h3>

@@ -40,52 +40,63 @@ const CompanyHeader = ({ company }: CompanyHeaderProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-4">
+    <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-6">
+      <div className="flex flex-col sm:flex-row items-start gap-4">
+        {/* Logo */}
+        <div className="flex-shrink-0">
           {company.logo ? (
             <img
               src={company.logo}
               alt={company.name}
-              className="w-20 h-20 rounded-lg object-cover"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover"
             />
           ) : (
-            <div className="w-20 h-20 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <Building2 className="w-10 h-10 text-indigo-600" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <Building2 className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-600" />
             </div>
           )}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{company.name}</h1>
-            <div className="mt-2 flex items-center space-x-4 text-sm text-gray-600">
-              <div className="flex items-center">
-                <Shield className="w-4 h-4 mr-1" />
-                <span>TVA: {company.vat}</span>
-              </div>
-              <div className="flex items-center">
-                <Calendar className="w-4 h-4 mr-1" />
-                <span>
-                  Créée le {
-                    company.creationDate 
-                      ? new Date(company.creationDate).toLocaleDateString('fr-BE', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })
-                      : '-'
-                  }
-                </span>
-              </div>
-              <div className="flex items-center">
-                <MapPin className="w-4 h-4 mr-1" />
-                <span>{`${company.city || ''}`}</span>
+        </div>
+
+        {/* Company Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{company.name}</h1>
+
+              {/* Info badges - stack on mobile, inline on larger screens */}
+              <div className="mt-2 flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <Shield className="w-4 h-4 mr-1 flex-shrink-0" />
+                  <span className="truncate">TVA: {company.vat}</span>
+                </div>
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-1 flex-shrink-0" />
+                  <span className="truncate">
+                    Créée le {
+                      company.creationDate
+                        ? new Date(company.creationDate).toLocaleDateString('fr-BE', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
+                        : '-'
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                  <span className="truncate">{company.city || '-'}</span>
+                </div>
               </div>
             </div>
+
+            {/* Status badge */}
+            <div className="flex-shrink-0">
+              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(company.status)}`}>
+                {getStatusText(company.status)}
+              </span>
+            </div>
           </div>
-        </div>
-        <div>
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(company.status)}`}>
-            {getStatusText(company.status)}
-          </span>
         </div>
       </div>
     </div>
