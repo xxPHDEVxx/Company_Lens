@@ -68,7 +68,8 @@ const Signup = () => {
         name,
         email,
         password,
-        companyId: '1' // Default to company 1 for now
+        passwordConfirm: confirmPassword,
+        companyId: null // Optional field
       });
       
       // Store the token
