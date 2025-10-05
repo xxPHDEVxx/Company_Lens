@@ -1,14 +1,15 @@
 #!/bin/bash
 set -e
 
-# Wait for database if DB_HOST is set (Docker Compose)
-# On Render, DATABASE_URL is used directly by Django, no wait needed
-if [ -n "$DB_HOST" ]; then
+# Only wait for database in Docker Compose (when RENDER is not set)
+if [ -z "$RENDER" ] && [ -n "$DB_HOST" ]; then
   echo "Waiting for database at $DB_HOST..."
   while ! nc -z ${DB_HOST} ${DB_PORT:-5432}; do
     sleep 0.1
   done
   echo "Database is ready!"
+else
+  echo "Skipping database wait (using DATABASE_URL)"
 fi
 
 echo "Running migrations..."
