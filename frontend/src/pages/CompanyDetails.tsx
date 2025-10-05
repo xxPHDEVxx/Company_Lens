@@ -173,34 +173,34 @@ const CompanyDetails = () => {
       {/* Top Navigation */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
+          <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
+            <div className="flex items-center min-w-0">
               <button
                 onClick={() => navigate(sourceRoute)}
                 className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                <span>{sourcePage}</span>
+                <ArrowLeft className="w-5 h-5 mr-1 sm:mr-2 flex-shrink-0" />
+                <span className="text-sm sm:text-base truncate">{sourcePage}</span>
               </button>
             </div>
-            <div className="flex items-center space-x-4">
-              <button 
+            <div className="flex items-center gap-1 sm:gap-4">
+              <button
                 onClick={handleFollowToggle}
                 className={`p-2 transition-colors ${
-                  company?.is_followed 
-                    ? 'text-yellow-500 hover:text-yellow-600' 
+                  company?.is_followed
+                    ? 'text-yellow-500 hover:text-yellow-600'
                     : 'text-gray-400 hover:text-gray-600'
                 }`}
                 title={company?.is_followed ? 'Ne plus suivre' : 'Suivre cette entreprise'}
               >
-                <Star 
-                  className="w-5 h-5" 
+                <Star
+                  className="w-5 h-5"
                   fill={company?.is_followed ? 'currentColor' : 'none'}
                 />
               </button>
-              <button className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                <Download className="w-4 h-4 mr-2" />
-                <span>Exporter</span>
+              <button className="flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs sm:text-sm">
+                <Download className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Exporter</span>
               </button>
             </div>
           </div>
@@ -208,19 +208,19 @@ const CompanyDetails = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Company Header */}
         <CompanyHeader company={company} />
 
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
+            <nav className="flex -mb-px overflow-x-auto">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  className={`px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'text-indigo-600 border-indigo-600'
                       : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
