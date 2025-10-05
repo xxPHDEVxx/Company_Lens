@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import ConfirmationModal from '../common/ConfirmationModal';
+import SearchBar from '../common/SearchBar';
 import { ToastContainer } from '../common/Toast';
 import { useToast } from '../../hooks/useToast';
 import { groupApi } from '../../services/api';
@@ -83,8 +84,8 @@ function SortableCompanyCard({ company, onDelete, onView }: SortableCompanyCardP
       </div>
       <h3 className="font-semibold text-gray-900 mb-1">{company.name}</h3>
       <p className="text-sm text-gray-600 mb-2">TVA: {company.vat}</p>
-      {company.sector && (
-        <p className="text-sm text-gray-500 mb-1">Secteur: {company.sector}</p>
+      {company.activities?.sectors && company.activities.sectors.length > 0 && (
+        <p className="text-sm text-gray-500 mb-1">Secteur: {company.activities.sectors[0]}</p>
       )}
       {company.city && (
         <p className="text-sm text-gray-500">Localisation: {company.city}</p>
@@ -303,12 +304,10 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
             <div className="p-6">
               {/* Search */}
               <div className="mb-4">
-                <input
-                  type="text"
-                  placeholder="Rechercher par nom ou numéro TVA..."
+                <SearchBar
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={setSearchTerm}
+                  placeholder="Rechercher par nom ou numéro TVA..."
                 />
               </div>
 
@@ -335,8 +334,8 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">{company.name}</div>
                         <div className="text-sm text-gray-600">TVA: {company.vat || 'N/A'}</div>
-                        {company.sector && (
-                          <div className="text-sm text-gray-500">{company.sector}</div>
+                        {company.activities?.sectors && company.activities.sectors.length > 0 && (
+                          <div className="text-sm text-gray-500">{company.activities.sectors[0]}</div>
                         )}
                       </div>
                     </label>

@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import MainContentLayout from '../components/layout/MainContentLayout';
 import { CompanyStats, CompanyFilters, CompanyList } from '../components/suivi';
+import SearchBar from '../components/common/SearchBar';
 import { useFollowedCompanies, useUnfollowCompany } from '../hooks/queries';
-import type { Company } from '../types/api';
-
-// Type for followed company (using Company type from API)
-type FollowedCompany = Company;
 
 
 const SuiviContent = () => {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterRegion, setFilterRegion] = useState<'all' | 'flanders' | 'wallonia' | 'brussels'>('all');
   const [sortBy, setSortBy] = useState<'name' | 'followedSince' | 'lastUpdate'>('followedSince');
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Use React Query hooks
   const { data: followedCompanies = [], isLoading, error } = useFollowedCompanies();
@@ -29,7 +27,17 @@ const SuiviContent = () => {
 
   const filteredAndSortedCompanies = followedCompanies
     .filter(company => {
+      // Search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesName = company.name.toLowerCase().includes(searchLower);
+        const matchesVat = (company.vat || '').toLowerCase().includes(searchLower);
+        const matchesCity = (company.city || '').toLowerCase().includes(searchLower);
+        if (!matchesName && !matchesVat && !matchesCity) return false;
+      }
+      // Status filter
       if (filterStatus !== 'all' && company.status !== filterStatus) return false;
+      // Region filter
       if (filterRegion !== 'all' && company.region !== filterRegion) return false;
       return true;
     })
@@ -95,6 +103,16 @@ const SuiviContent = () => {
               <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
                 {/* Stats */}
                 <CompanyStats followedCompanies={followedCompanies} />
+
+                {/* Search Bar */}
+                <div className="mb-6">
+                  <SearchBar
+                    value={searchTerm}
+                    onChange={setSearchTerm}
+                    placeholder="Rechercher par nom, TVA ou ville..."
+                    className="max-w-md"
+                  />
+                </div>
 
                 {/* Filters */}
                 <CompanyFilters
