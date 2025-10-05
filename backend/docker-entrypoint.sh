@@ -35,7 +35,7 @@ else:
 EOF
 
   echo "Loading demo data..."
-  python manage.py create_demo_data || echo "⚠ Demo data command not found or failed"
+  python scripts/populate_demo.py || echo "⚠ Demo data script not found or failed"
 fi
 
 echo "Starting application..."
