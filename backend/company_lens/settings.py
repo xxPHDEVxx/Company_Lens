@@ -43,6 +43,10 @@ INSTALLED_APPS = [
     'groups',
     'users',
     'search',
+
+    # Celery apps
+    'django_celery_beat',  # For periodic tasks
+    'django_celery_results',  # For result backend
 ]
 
 MIDDLEWARE = [
@@ -289,3 +293,50 @@ LOGGING = {
 
 # Create logs directory if it doesn't exist
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# Celery Configuration
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='amqp://guest:guest@localhost:5672//')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='django-db')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Celery task configuration
+CELERY_TASK_ALWAYS_EAGER = config('CELERY_ALWAYS_EAGER', default=False, cast=bool)  # Set to True for testing without RabbitMQ
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_SOFT_TIME_LIMIT = 240  # 4 minutes
+CELERY_TASK_TIME_LIMIT = 300  # 5 minutes
+CELERY_TASK_MAX_RETRIES = 3
+CELERY_TASK_DEFAULT_RETRY_DELAY = 60  # 60 seconds
+
+# RabbitMQ specific settings
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_RETRY = True
+CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
+CELERY_BROKER_HEARTBEAT = 30
+
+# Redis cache for Celery (optional, for result caching)
+CELERY_CACHE_BACKEND = 'default'
+
+# Worker pool configuration
+CELERY_WORKER_POOL = 'prefork'
+CELERY_WORKER_CONCURRENCY = 4
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 200000  # 200MB
+
+# Task result backend configuration
+CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
+CELERY_RESULT_BACKEND_MAX_RETRIES = 10
+CELERY_RESULT_PERSISTENT = True
+
+# AI Scraper configuration (placeholder for when API keys are configured)
+AI_SCRAPER_ENABLED = config('AI_SCRAPER_ENABLED', default=False, cast=bool)
+AI_SCRAPER_API_KEY = config('AI_SCRAPER_API_KEY', default='')
+AI_SCRAPER_BASE_PATH = config('AI_SCRAPER_BASE_PATH', default=str(BASE_DIR.parent / 'ai'))
+AI_SCRAPER_TIMEOUT = config('AI_SCRAPER_TIMEOUT', default=120, cast=int)  # 2 minutes
+
+# Company data fetching configuration
+COMPANY_FETCH_RETRY_DELAY = 300  # 5 minutes between retries
+COMPANY_FETCH_MAX_RETRIES = 3
+COMPANY_DATA_CACHE_TTL = 86400  # 24 hours
