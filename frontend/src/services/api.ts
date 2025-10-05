@@ -25,7 +25,7 @@ const getAuthHeaders = (): HeadersInit => {
 // Company APIs
 export const companyApi = {
   getAll: async (): Promise<Company[]> => {
-    const response = await fetch(`${API_BASE_URL}/companies`, {
+    const response = await fetch(`${API_BASE_URL}/companies/`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch companies');
@@ -36,7 +36,7 @@ export const companyApi = {
   },
 
   getFollowed: async (): Promise<Company[]> => {
-    const response = await fetch(`${API_BASE_URL}/companies/followed`, {
+    const response = await fetch(`${API_BASE_URL}/companies/followed/`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch followed companies');
@@ -86,7 +86,7 @@ export const companyApi = {
   },
 
   create: async (company: Partial<Company>): Promise<Company> => {
-    const response = await fetch(`${API_BASE_URL}/companies`, {
+    const response = await fetch(`${API_BASE_URL}/companies/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(transformRequest(company)),
@@ -283,7 +283,7 @@ export const groupApi = {
 // Recent searches APIs
 export const recentSearchApi = {
   getAll: async (): Promise<RecentSearch[]> => {
-    const response = await fetch(`${API_BASE_URL}/recent-searches`, {
+    const response = await fetch(`${API_BASE_URL}/recent-searches/`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch recent searches');
