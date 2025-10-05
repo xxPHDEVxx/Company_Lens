@@ -10,7 +10,9 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.db.models import Count, Sum, Avg
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.core.cache import cache
 from datetime import timedelta
+import logging
 
 from .models import Company, Establishment, FinancialData, CompanyFollower
 from .serializers import (
@@ -23,6 +25,14 @@ from .serializers import (
     CompanyStatisticsSerializer,
     FollowedCompanySerializer
 )
+try:
+    from .tasks import fetch_company_data, update_company_data
+except ImportError:
+    # Celery tasks not available
+    fetch_company_data = None
+    update_company_data = None
+
+logger = logging.getLogger(__name__)
 
 
 class CompanyViewSet(viewsets.ModelViewSet):
@@ -101,6 +111,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
     def search(self, request):
         """
         Advanced company search with multiple criteria.
+        If a company is not found by VAT, triggers an async fetch from AI scraper.
         """
         queryset = Company.objects.all()
         params = request.query_params
@@ -108,14 +119,24 @@ class CompanyViewSet(viewsets.ModelViewSet):
         # Initialize search variables
         query = ''
         search_type = 'name'
+        vat_search = False
+        clean_vat = None
         
         # Check for direct VAT number search (from frontend)
         vat_number = params.get('vatNumber', '').strip()
         if vat_number:
             # Clean VAT number for search
             clean_vat = vat_number.upper().replace(' ', '').replace('.', '')
+            # Ensure proper Belgian VAT format
+            if not clean_vat.startswith('BE'):
+                clean_vat = 'BE' + clean_vat.lstrip('0')
+            # Pad with zeros if needed (Belgian VAT should be BE + 10 digits)
+            if clean_vat.startswith('BE') and len(clean_vat) < 12:
+                clean_vat = 'BE' + clean_vat[2:].zfill(10)
+            
             queryset = queryset.filter(vat__icontains=clean_vat)
             search_type = 'vat'  # Set search type for ordering logic
+            vat_search = True
         else:
             # Apply search based on type (legacy/alternative format)
             query = params.get('query', '').strip()
@@ -125,7 +146,13 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 if search_type == 'vat':
                     # Clean VAT number for search
                     clean_vat = query.upper().replace(' ', '').replace('.', '')
+                    if not clean_vat.startswith('BE'):
+                        clean_vat = 'BE' + clean_vat.lstrip('0')
+                    if clean_vat.startswith('BE') and len(clean_vat) < 12:
+                        clean_vat = 'BE' + clean_vat[2:].zfill(10)
+                    
                     queryset = queryset.filter(vat__icontains=clean_vat)
+                    vat_search = True
                 elif search_type == 'name':
                     queryset = queryset.filter(name__icontains=query)
                 elif search_type == 'city':
@@ -157,6 +184,98 @@ class CompanyViewSet(viewsets.ModelViewSet):
             except (ValueError, TypeError):
                 pass
         
+        # Check if this is a VAT search with no results - trigger async fetch
+        if vat_search and clean_vat and queryset.count() == 0:
+            # Check if we're already fetching this VAT
+            fetch_status_key = f"fetch_status:{clean_vat}"
+            fetch_status = cache.get(fetch_status_key)
+            
+            if fetch_status and fetch_status.get('status') == 'pending':
+                # Already fetching this VAT
+                return Response({
+                    'results': [],
+                    'count': 0,
+                    'fetch_status': 'pending',
+                    'message': _('Company data is being fetched. Please check back in a moment.'),
+                    'task_id': fetch_status.get('task_id')
+                }, status=status.HTTP_202_ACCEPTED)
+            
+            # Check if we recently failed to fetch this VAT
+            failed_key = f"company_fetch_failed:{clean_vat}"
+            failed_data = cache.get(failed_key)
+            if failed_data:
+                return Response({
+                    'results': [],
+                    'count': 0,
+                    'fetch_status': 'failed',
+                    'message': _('Unable to fetch company data at this time.'),
+                    'error': failed_data.get('error', 'Unknown error')
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Trigger async fetch
+            try:
+                from django.conf import settings
+                
+                # Use synchronous execution if CELERY_ALWAYS_EAGER is True (for testing)
+                if settings.CELERY_TASK_ALWAYS_EAGER:
+                    result = fetch_company_data(clean_vat, user_id=request.user.id)
+                    if result.get('status') == 'success':
+                        # Company was fetched successfully, re-run the query
+                        queryset = Company.objects.filter(vat=clean_vat)
+                        if queryset.exists():
+                            serializer = CompanyListSerializer(queryset, many=True, context={'request': request})
+                            return Response({
+                                'results': serializer.data,
+                                'count': 1,
+                                'fetch_status': 'completed',
+                                'source': 'ai_scraper'
+                            })
+                else:
+                    # Async execution with Celery
+                    if fetch_company_data:
+                        task = fetch_company_data.delay(clean_vat, user_id=request.user.id)
+                    else:
+                        # Celery not available, return mock data
+                        return Response({
+                            'status': 'mock',
+                            'message': 'Celery not configured, returning mock data',
+                            'company': {
+                                'vat': clean_vat,
+                                'name': f'Mock Company {clean_vat}',
+                                'status': 'active',
+                                'city': 'Brussels'
+                            }
+                        }, status=status.HTTP_200_OK)
+                    
+                    # Store fetch status in cache
+                    cache.set(fetch_status_key, {
+                        'status': 'pending',
+                        'task_id': task.id,
+                        'vat': clean_vat,
+                        'timestamp': timezone.now().isoformat()
+                    }, timeout=300)  # 5 minutes
+                    
+                    logger.info(f"Triggered async fetch for VAT {clean_vat}, task_id: {task.id}")
+                    
+                    return Response({
+                        'results': [],
+                        'count': 0,
+                        'fetch_status': 'pending',
+                        'message': _('Company not found in database. Fetching from external sources...'),
+                        'task_id': task.id,
+                        'vat': clean_vat
+                    }, status=status.HTTP_202_ACCEPTED)
+                    
+            except Exception as e:
+                logger.error(f"Failed to trigger fetch for VAT {clean_vat}: {e}")
+                return Response({
+                    'results': [],
+                    'count': 0,
+                    'fetch_status': 'error',
+                    'message': _('Unable to fetch company data at this time.'),
+                    'error': str(e)
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
         # Order by relevance or name
         if query and search_type == 'name':
             # Put exact matches first
@@ -176,6 +295,101 @@ class CompanyViewSet(viewsets.ModelViewSet):
         
         serializer = CompanyListSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def fetch_status(self, request):
+        """
+        Check the status of a company fetch task.
+        """
+        task_id = request.query_params.get('task_id')
+        vat_number = request.query_params.get('vat')
+        
+        if not task_id and not vat_number:
+            return Response({
+                'error': _('Either task_id or vat parameter is required')
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check by VAT number first
+        if vat_number:
+            # Clean VAT number
+            clean_vat = vat_number.upper().replace(' ', '').replace('.', '')
+            if not clean_vat.startswith('BE'):
+                clean_vat = 'BE' + clean_vat.lstrip('0')
+            if clean_vat.startswith('BE') and len(clean_vat) < 12:
+                clean_vat = 'BE' + clean_vat[2:].zfill(10)
+            
+            # Check if company now exists
+            try:
+                company = Company.objects.get(vat=clean_vat)
+                serializer = CompanyDetailSerializer(company, context={'request': request})
+                return Response({
+                    'status': 'completed',
+                    'data': serializer.data,
+                    'message': _('Company data fetched successfully')
+                })
+            except Company.DoesNotExist:
+                pass
+            
+            # Check fetch status in cache
+            fetch_status_key = f"fetch_status:{clean_vat}"
+            fetch_status = cache.get(fetch_status_key)
+            
+            if fetch_status:
+                return Response(fetch_status)
+            
+            # Check if we have a failure record
+            failed_key = f"company_fetch_failed:{clean_vat}"
+            failed_data = cache.get(failed_key)
+            if failed_data:
+                return Response({
+                    'status': 'failed',
+                    'error': failed_data.get('error', 'Unknown error'),
+                    'message': _('Failed to fetch company data')
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check by task ID using Celery result backend
+        if task_id:
+            try:
+                from celery.result import AsyncResult
+            except ImportError:
+                return Response(
+                    {'error': 'Task tracking not available'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+            result = AsyncResult(task_id)
+            
+            if result.ready():
+                if result.successful():
+                    task_result = result.get()
+                    if task_result.get('status') == 'success':
+                        return Response({
+                            'status': 'completed',
+                            'data': task_result.get('data'),
+                            'message': _('Company data fetched successfully')
+                        })
+                    else:
+                        return Response({
+                            'status': 'failed',
+                            'error': task_result.get('error', 'Unknown error'),
+                            'message': _('Failed to fetch company data')
+                        }, status=status.HTTP_404_NOT_FOUND)
+                else:
+                    return Response({
+                        'status': 'failed',
+                        'error': str(result.info),
+                        'message': _('Task failed')
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                return Response({
+                    'status': 'pending',
+                    'message': _('Task is still processing'),
+                    'task_id': task_id
+                })
+        
+        return Response({
+            'status': 'unknown',
+            'message': _('No information available for this request')
+        }, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def follow(self, request, pk=None):
