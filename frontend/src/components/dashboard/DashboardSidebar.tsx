@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useSidebar } from '../../contexts/SidebarContext';
 import { useLogout } from '../../contexts/LogoutContext';
+import { useMobileMenu } from '../../contexts/MobileMenuContext';
 import { navigationItems, getActiveItem } from '../../config/navigation';
 import { SidebarHeader, NavigationItem, UserProfile } from './sidebar';
 import { authApi } from '../../services/api';
@@ -10,6 +11,7 @@ import { Lock } from 'lucide-react';
 const DashboardSidebar = () => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const { showLogoutModal } = useLogout();
+  const { closeMobileMenu } = useMobileMenu();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -25,6 +27,9 @@ const DashboardSidebar = () => {
   const activeItem = getActiveItem(location.pathname);
 
   const handleNavigation = (route: string) => {
+    // Close mobile menu on navigation
+    closeMobileMenu();
+
     // Only allow navigation to dashboard if user doesn't have a company
     if (!hasCompany && route !== '/dashboard') {
       // Show a toast or alert that they need to add a company first
@@ -39,7 +44,7 @@ const DashboardSidebar = () => {
   };
 
   return (
-    <div className={`fixed left-0 top-0 h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col shadow-2xl backdrop-blur-lg border-r border-slate-700/50 transition-all duration-300 ease-in-out z-50 ${
+    <div className={`h-screen md:sticky md:top-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex flex-col shadow-2xl backdrop-blur-lg border-r border-slate-700/50 transition-all duration-300 ease-in-out ${
       isCollapsed ? 'w-28' : 'w-64'
     }`}>
       {/* Header with Logo and Toggle */}

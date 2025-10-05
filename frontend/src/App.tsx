@@ -15,6 +15,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { SidebarProvider } from './contexts/SidebarContext';
 import { LogoutProvider } from './contexts/LogoutContext';
+import { MobileMenuProvider } from './contexts/MobileMenuContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 // import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient } from './lib/queryClient';
@@ -104,11 +105,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <SidebarProvider>
-          <LogoutProvider>
-            <AppContent />
-          </LogoutProvider>
-        </SidebarProvider>
+        <MobileMenuProvider>
+          <SidebarProvider>
+            <LogoutProvider>
+              <AppContent />
+            </LogoutProvider>
+          </SidebarProvider>
+        </MobileMenuProvider>
       </Router>
       {/* <ReactQueryDevtools initialIsOpen={false} /> */}
     </QueryClientProvider>
