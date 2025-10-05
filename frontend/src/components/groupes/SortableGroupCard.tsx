@@ -66,32 +66,32 @@ function SortableGroupCard({ group, onDelete, onEdit, getGroupIcon }: SortableGr
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg${
+      className={`bg-white border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-lg${
         isDragging ? 'opacity-50 shadow-2xl z-50' : ''
       }`}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
           <div
             {...attributes}
             {...listeners}
-            className="mt-2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 touch-none"
+            className="mt-2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 touch-none flex-shrink-0"
             title="Glisser pour réorganiser"
           >
             <GripVertical className="w-5 h-5" />
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
               {getGroupIcon(group.icon)}
             </div>
-            <h3 className="font-semibold text-gray-900 text-lg">
+            <h3 className="font-semibold text-gray-900 text-base sm:text-lg break-words">
               {group.name}
             </h3>
           </div>
         </div>
-        <div className="flex gap-1">
-          <button 
+        <div className="flex gap-1 flex-shrink-0">
+          <button
             onClick={() => onEdit(group)}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
             title="Modifier le groupe"
@@ -112,31 +112,31 @@ function SortableGroupCard({ group, onDelete, onEdit, getGroupIcon }: SortableGr
       </div>
 
       {/* Description */}
-      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+      <p className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2 break-words">
         {group.description}
       </p>
 
       {/* Stats */}
-      <div className="text-gray-600 text-sm space-y-2 mb-4">
+      <div className="text-gray-600 text-xs sm:text-sm space-y-2 mb-4">
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
-          <span>{group.companiesCount} entreprise{group.companiesCount !== 1 ? 's' : ''}</span>
+          <span className="truncate">{group.companiesCount} entreprise{group.companiesCount !== 1 ? 's' : ''}</span>
         </div>
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span>Créé le {formatDate(group.createdAt)}</span>
+          <span className="truncate">Créé le {formatDate(group.createdAt)}</span>
         </div>
       </div>
 
       {/* Actions */}
       <div className="pt-4 border-t border-gray-100">
-        <button 
+        <button
           onClick={handleViewCompanies}
-          className="w-full px-4 py-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors duration-200 text-sm font-medium"
+          className="w-full px-3 sm:px-4 py-2 text-gray-700 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors duration-200 text-xs sm:text-sm font-medium"
         >
           Voir les entreprises
         </button>
