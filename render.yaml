@@ -13,6 +13,7 @@ services:
     name: company-lens-redis
     plan: free
     maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
 
   # Django Backend API
   - type: web
