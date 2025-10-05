@@ -8,12 +8,6 @@ databases:
     plan: free
 
 services:
-  # PostgreSQL Database
-  - type: pserv
-    name: company-lens-postgres
-    plan: free
-    env: docker
-
   # Redis Cache
   - type: redis
     name: company-lens-redis
