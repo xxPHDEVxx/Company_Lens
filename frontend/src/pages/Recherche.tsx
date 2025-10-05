@@ -65,13 +65,13 @@ const RechercheContent = () => {
   return (
     <MainContentLayout>
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-600 to-green-600 p-8">
-            <h1 className="text-3xl font-bold text-white mb-2">
+          <div className="bg-gradient-to-r from-emerald-600 to-green-600 p-4 sm:p-8">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2">
               Recherche d'entreprises
             </h1>
-            <p className="text-green-100">
+            <p className="text-sm sm:text-base text-green-100">
               Recherchez des entreprises belges par numéro de TVA et affinez vos résultats avec nos filtres
             </p>
           </div>
@@ -95,7 +95,7 @@ const RechercheContent = () => {
       )}
 
       {/* Recent Searches */}
-      <div className="mt-8 mb-8">
+      <div className="mt-6 sm:mt-8 mb-6 sm:mb-8">
         <RecentSearches />
       </div>
     </MainContentLayout>

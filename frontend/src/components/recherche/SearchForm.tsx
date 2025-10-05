@@ -29,7 +29,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+    <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6 sm:mb-8">
       {/* VAT Number Search */}
       <VatNumberInput
         value={filters.vatNumber}
@@ -39,7 +39,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
       />
 
       {/* Filters Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
         <FilterSelect
           id="companyType"
           label="Type d'entreprise"
@@ -48,7 +48,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
           options={companyTypes}
           placeholder="Tous les types"
         />
-        
+
         <FilterSelect
           id="status"
           label="Statut"
@@ -57,7 +57,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
           options={companyStatuses}
           placeholder="Tous les statuts"
         />
-        
+
         <FilterSelect
           id="region"
           label="Région"
@@ -69,12 +69,12 @@ const SearchForm: React.FC<SearchFormProps> = ({
       </div>
 
       {/* Action Buttons Row */}
-      <div className="flex justify-between items-center">
-        <ClearFiltersButton 
-          onClick={handleClearFilters} 
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
+        <ClearFiltersButton
+          onClick={handleClearFilters}
           hasFilters={!!filters.vatNumber || !!filters.companyType || !!filters.status || !!filters.region}
         />
-        <div className="text-sm text-gray-500">
+        <div className="text-xs sm:text-sm text-gray-500">
           {(filters.vatNumber || filters.companyType || filters.status || filters.region) && (
             <span>Filtres actifs</span>
           )}
@@ -94,17 +94,17 @@ const ClearFiltersButton: React.FC<ClearFiltersButtonProps> = ({ onClick, hasFil
     onClick={onClick}
     disabled={!hasFilters}
     className={`
-      px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2
-      ${hasFilters 
-        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900' 
+      px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center gap-2 text-xs sm:text-sm
+      ${hasFilters
+        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'
         : 'bg-gray-50 text-gray-400 cursor-not-allowed'
       }
     `}
   >
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
     </svg>
-    Réinitialiser les filtres
+    <span className="whitespace-nowrap">Réinitialiser les filtres</span>
   </button>
 );
 
