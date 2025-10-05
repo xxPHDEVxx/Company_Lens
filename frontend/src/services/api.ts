@@ -332,19 +332,10 @@ export const authApi = {
     name: string;
     companyId?: string | null;
   }): Promise<AuthResponse> => {
-    // Transform to snake_case for Django API
-    const payload = {
-      email: userData.email,
-      password: userData.password,
-      password_confirm: userData.passwordConfirm,
-      name: userData.name,
-      ...(userData.companyId && { company_id: userData.companyId })
-    };
-
     const response = await fetch(`${API_BASE_URL}/auth/signup/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(transformRequest(userData)),
     });
     if (!response.ok) {
       const error = await response.json();
@@ -352,7 +343,7 @@ export const authApi = {
     }
     const data = await response.json();
     localStorage.setItem('authToken', data.token);
-    return data;
+    return transformResponse(data);
   },
 
   logout: async (): Promise<void> => {
