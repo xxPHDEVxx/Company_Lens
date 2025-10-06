@@ -1,19 +1,12 @@
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
-
-interface FinancialData {
-  year: number;
-  revenue: number;
-  profit: number;
-  margin: number;
-  employees: number;
-}
+import type { FinancialData } from '../../types/api';
 
 interface FinancialChartsProps {
   data: FinancialData[];
 }
 
-const FinancialCharts: React.FC<FinancialChartsProps> = ({ data }) => {
+const FinancialCharts: React.FC<FinancialChartsProps> = ({ data = [] }) => {
   // Sort data by year to ensure consistent ordering
   const sortedData = [...data].sort((a, b) => a.year - b.year);
   
