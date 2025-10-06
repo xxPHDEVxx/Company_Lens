@@ -11,10 +11,14 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({ data = [] }) => {
   const sortedData = [...data].sort((a, b) => a.year - b.year);
   
   const validRevenues = sortedData.filter(d => d.revenue != null && !isNaN(d.revenue));
-  const maxRevenue = validRevenues.length > 0 ? Math.max(...validRevenues.map(d => d.revenue)) : 1;
+  const maxRevenue = validRevenues.length > 0
+    ? Math.max(...validRevenues.map(d => d.revenue).filter((v): v is number => typeof v === 'number'))
+    : 1;
   
   const validProfits = sortedData.filter(d => d.profit != null && !isNaN(d.profit));
-  const maxProfit = validProfits.length > 0 ? Math.max(...validProfits.map(d => Math.abs(d.profit))) : 1;
+  const maxProfit = validProfits.length > 0
+    ? Math.max(...validProfits.map(d => d.profit).filter((v): v is number => typeof v === 'number').map(Math.abs))
+    : 1;
   
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-BE', {
@@ -80,7 +84,7 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({ data = [] }) => {
           {(() => {
             // Calculate max margin once for all items
             const validMargins = sortedData.filter(d => d.margin != null && !isNaN(d.margin));
-            const maxMargin = validMargins.length > 0 ? Math.max(...validMargins.map(d => d.margin)) : 100;
+            const maxMargin = validMargins.length > 0 ? Math.max(...validMargins.map(d => d.margin!)) : 100;
             
             return sortedData.map((yearData, index) => {
               const currentMargin = yearData.margin ?? 0;
@@ -166,8 +170,8 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({ data = [] }) => {
           <p className="text-lg font-semibold text-gray-900">
             {(() => {
               const validRevenues = sortedData.filter(d => d.revenue != null && !isNaN(d.revenue));
-              return validRevenues.length > 0 
-                ? formatCurrency(validRevenues.reduce((sum, d) => sum + d.revenue, 0) / validRevenues.length)
+              return validRevenues.length > 0
+                ? formatCurrency(validRevenues.reduce((sum, d) => sum + d.revenue!, 0) / validRevenues.length)
                 : 'N/A';
             })()}
           </p>
@@ -177,7 +181,7 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({ data = [] }) => {
           <p className="text-lg font-semibold text-gray-900">
             {sortedData.length > 1 && sortedData[0].revenue != null && sortedData[sortedData.length - 1].revenue != null
               ? (() => {
-                const growth = calculateGrowth(sortedData[sortedData.length - 1].revenue, sortedData[0].revenue);
+                const growth = calculateGrowth(sortedData[sortedData.length - 1].revenue!, sortedData[0].revenue!);
                 return `${growth > 0 ? '+' : ''}${growth.toFixed(1)}%`;
               })()
               : 'N/A'}
@@ -188,8 +192,8 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({ data = [] }) => {
           <p className="text-lg font-semibold text-gray-900">
             {sortedData.length > 0 ? (() => {
               const validMargins = sortedData.filter(d => d.margin != null && !isNaN(d.margin));
-              return validMargins.length > 0 
-                ? `${(validMargins.reduce((sum, d) => sum + d.margin, 0) / validMargins.length).toFixed(1)}%` 
+              return validMargins.length > 0
+                ? `${(validMargins.reduce((sum, d) => sum + d.margin!, 0) / validMargins.length).toFixed(1)}%`
                 : 'N/A';
             })() : 'N/A'}
           </p>
