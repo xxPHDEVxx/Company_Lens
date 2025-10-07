@@ -117,3 +117,4 @@ frontend/build/
 *.temp
 .DS_Store
 Thumbs.db
+ai/.env
