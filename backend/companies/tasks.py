@@ -6,13 +6,12 @@ Integrates with the AI scraping system to fetch Belgian company data.
 import logging
 import json
 import subprocess
-import sys
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
+from datetime import timedelta, datetime
 from pathlib import Path
 
 from celery import shared_task, Task
-from celery.exceptions import SoftTimeLimitExceeded, MaxRetriesExceededError
+from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
@@ -148,34 +147,110 @@ def fetch_company_data(vat_number: str, user_id: Optional[int] = None) -> Dict[s
         }
 
 
-def call_ai_scraper(vat_number: str) -> Dict[str, Any]:
+def call_ai_scraper(vat_number: str, website: Optional[str] = None) -> Dict[str, Any]:
     """
     Call the AI scraping system to fetch company data.
-    
-    This function interfaces with the AI scraper module.
-    Currently returns mock data when AI system is not configured.
+
+    This function interfaces with the AI scraper module using subprocess
+    to execute the Python scraper with Poetry.
+
+    Args:
+        vat_number: Belgian VAT number (format: BE0123456789 or 0123456789)
+        website: Optional company website URL
+
+    Returns:
+        Dict containing status and company data or error information
     """
     # Check if AI scraper path exists
     ai_scraper_path = Path(settings.AI_SCRAPER_BASE_PATH)
     if not ai_scraper_path.exists():
         logger.warning(f"AI scraper path does not exist: {ai_scraper_path}")
         return create_mock_company_data(vat_number)
-    
+
+    # Clean VAT number (remove BE prefix if present)
+    clean_vat = vat_number.replace('BE', '').replace(' ', '')
+
     try:
-        # Try to import and use the AI scraper
-        # This is a placeholder for when the AI system is properly configured
-        scraper_script = ai_scraper_path / 'src' / 'company_scraper' / 'runnable' / 'company_scraper.py'
-        
-        if scraper_script.exists():
-            # Run the scraper as a subprocess (simplified version)
-            # In production, this would use the proper AI scraper API
-            logger.info(f"Would call AI scraper for VAT: {vat_number}")
-            # For now, return mock data
-            return create_mock_company_data(vat_number)
-        else:
-            logger.warning(f"AI scraper script not found: {scraper_script}")
-            return create_mock_company_data(vat_number)
-            
+        # Prepare Python script to run the scraper
+        python_script = f"""
+import sys
+import json
+sys.path.insert(0, '{ai_scraper_path / 'src'}')
+
+from src.core.models.scrape.scrape_company_dto import ScrapeCompanyDto
+from src.features.company_scraper.runnable.company_scraper import run
+
+# Create DTO with VAT and optional website
+dto = ScrapeCompanyDto(vat_number="{clean_vat}", website={f'"{website}"' if website else 'None'})
+
+# Run scraper and get results
+result = run(dto)
+
+# Output as JSON
+print(json.dumps(result, ensure_ascii=False))
+"""
+
+        # Write script to temporary file
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(python_script)
+            script_path = f.name
+
+        try:
+            # Run the scraper using Poetry in the AI directory
+            logger.info(f"Calling AI scraper for VAT: {clean_vat}")
+
+            result = subprocess.run(
+                ['poetry', 'run', 'python', script_path],
+                cwd=str(ai_scraper_path),
+                capture_output=True,
+                text=True,
+                timeout=settings.AI_SCRAPER_TIMEOUT,
+                env={**subprocess.os.environ, 'PYTHONPATH': str(ai_scraper_path / 'src')}
+            )
+
+            if result.returncode == 0:
+                # Parse JSON output
+                output_lines = result.stdout.strip().split('\n')
+                json_output = output_lines[-1]  # Last line should be JSON
+
+                try:
+                    scraper_data = json.loads(json_output)
+                    logger.info(f"Successfully scraped data for VAT: {clean_vat}")
+
+                    return {
+                        'status': 'success',
+                        'data': scraper_data
+                    }
+                except json.JSONDecodeError as e:
+                    logger.error(f"Failed to parse scraper JSON output: {e}")
+                    logger.debug(f"Output: {result.stdout}")
+                    return {
+                        'status': 'error',
+                        'error': f'Invalid JSON from scraper: {str(e)}'
+                    }
+            else:
+                error_msg = result.stderr or result.stdout
+                logger.error(f"AI scraper failed for VAT {clean_vat}: {error_msg}")
+                return {
+                    'status': 'error',
+                    'error': f'Scraper process failed: {error_msg[:500]}'  # Limit error message length
+                }
+
+        finally:
+            # Clean up temporary file
+            import os
+            try:
+                os.unlink(script_path)
+            except:
+                pass
+
+    except subprocess.TimeoutExpired:
+        logger.error(f"AI scraper timeout for VAT {clean_vat}")
+        return {
+            'status': 'error',
+            'error': f'Scraper timeout after {settings.AI_SCRAPER_TIMEOUT} seconds'
+        }
     except Exception as e:
         logger.error(f"Error calling AI scraper: {e}")
         return {
@@ -184,153 +259,178 @@ def call_ai_scraper(vat_number: str) -> Dict[str, Any]:
         }
 
 
-def create_mock_company_data(vat_number: str) -> Dict[str, Any]:
-    """Create mock company data for testing when AI scraper is not available."""
-    return {
-        'status': 'success',
-        'data': {
-            'vat': vat_number,
-            'name': f'Mock Company {vat_number}',
-            'status': 'active',
-            'legal_form': 'SRL',
-            'creation_date': '2020-01-01',
-            'address': {
-                'street': 'Rue de la Loi',
-                'street_number': '42',
-                'postal_code': '1000',
-                'city': 'Brussels',
-                'region': 'brussels',
-                'country': 'BE'
-            },
-            'contact': {
-                'email': f'info@{vat_number.lower()}.be',
-                'phone': '+32 2 123 45 67',
-                'website': f'https://www.{vat_number.lower()}.be'
-            },
-            'activities': {
-                'nacebel_codes': ['62.01', '62.02'],
-                'sectors': ['Information Technology', 'Software Development'],
-                'services': ['Custom software development', 'IT consulting'],
-                'description': 'Mock company providing IT services'
-            },
-            'company_size': 'small',
-            'employees': 25
-        }
+def parse_french_date(date_str: Optional[str]) -> Optional[str]:
+    """
+    Parse French date format (e.g., "18 janvier 2024") to Django format (YYYY-MM-DD).
+    Returns None if parsing fails.
+    """
+    if not date_str:
+        return None
+
+    # French month names mapping
+    french_months = {
+        'janvier': 1, 'février': 2, 'mars': 3, 'avril': 4, 'mai': 5, 'juin': 6,
+        'juillet': 7, 'août': 8, 'septembre': 9, 'octobre': 10, 'novembre': 11, 'décembre': 12
     }
 
+    try:
+        # Try parsing as YYYY-MM-DD first
+        datetime.strptime(date_str, '%Y-%m-%d')
+        return date_str
+    except ValueError:
+        pass
 
+    try:
+        # Parse French format: "18 janvier 2024"
+        parts = date_str.split()
+        if len(parts) == 3:
+            day = int(parts[0])
+            month = french_months.get(parts[1].lower())
+            year = int(parts[2])
+
+            if month:
+                return f"{year:04d}-{month:02d}-{day:02d}"
+    except (ValueError, IndexError):
+        pass
+
+    return None
+
+
+# Until better integration this function will ensure the data are correctly adapted to the backend model
 @transaction.atomic
 def save_company_from_scraper_data(data: Dict[str, Any], vat_number: str) -> Company:
     """
-    Save or update company data from scraper results.
-    
+    Save or update company data from AI scraper results.
+
+    Maps the AI CompanySchema structure to Django models.
+
     Args:
-        data: Scraped company data
+        data: Scraped company data (CompanySchema.model_dump() output)
         vat_number: Belgian VAT number
-    
+
     Returns:
         Company instance
     """
     # Extract address data
     address_data = data.get('address', {})
     address = None
-    
+
     if address_data:
         address, _ = Address.objects.update_or_create(
             street=address_data.get('street', ''),
             street_number=address_data.get('street_number', ''),
             postal_code=address_data.get('postal_code', ''),
             city=address_data.get('city', ''),
+            postal_box=address_data.get('postal_box') or '',  # Ensure not None
             defaults={
-                'postal_box': address_data.get('postal_box', ''),
                 'province': address_data.get('province', ''),
                 'region': address_data.get('region', ''),
                 'country': address_data.get('country', 'BE'),
             }
         )
-    
+
+    # Extract finance data
+    finance_data = data.get('finance', {})
+    employees = finance_data.get('number_of_employees') if finance_data else None
+
     # Create or update company
-    contact_data = data.get('contact', {})
-    company, created = Company.objects.update_or_create(
-        vat=vat_number,
-        defaults={
-            'id': vat_number.replace('BE', 'C'),  # Generate ID from VAT
-            'name': data.get('name', f'Company {vat_number}'),
-            'status': data.get('status', 'active'),
-            'legal_form': data.get('legal_form', ''),
-            'creation_date': data.get('creation_date'),
-            'fiscal_year': data.get('fiscal_year', ''),
-            'capital': data.get('capital', ''),
-            'employees': data.get('employees'),
-            'company_type': data.get('company_type', ''),
-            'company_size': data.get('company_size', ''),
-            'address': address,
-            'website': contact_data.get('website', ''),
-            'phone': contact_data.get('phone', ''),
-            'email': contact_data.get('email', ''),
-        }
-    )
-    
+    contact_data = data.get('contact', {}) or {}
+    activity_data = data.get('activity', {}) or {}
+
+    # Map company_type list to string (take first type)
+    company_types = data.get('company_type', [])
+    company_type_str = company_types[0] if isinstance(company_types, list) and company_types else ''
+
+    # Use VAT as ID (it's already unique)
+    # Prepare company data
+    company_data = {
+        'name': data.get('name', f'Company {vat_number}'),
+        'status': 'active',  # AI schema doesn't have status field
+        'legal_form': data.get('legal_form', ''),
+        'creation_date': parse_french_date(data.get('established')),
+        'employees': employees,
+        'company_type': company_type_str,
+        'company_size': data.get('company_size', ''),
+        'address': address,
+        'website': contact_data.get('website', ''),
+        'phone': contact_data.get('phone', ''),
+        'email': contact_data.get('email', ''),
+    }
+
+    # Try to get existing company first
+    try:
+        company = Company.objects.get(vat=vat_number)
+        # Update existing company
+        for key, value in company_data.items():
+            setattr(company, key, value)
+        company.save()
+        created = False
+    except Company.DoesNotExist:
+        # Create new company with VAT as ID
+        company = Company(id=vat_number, vat=vat_number)
+        for key, value in company_data.items():
+            setattr(company, key, value)
+        company.save()
+        created = True
+
     # Save activities if present
-    activities_data = data.get('activities', {})
-    if activities_data:
+    if activity_data:
         Activity.objects.update_or_create(
             company=company,
             defaults={
-                'nacebel_codes': activities_data.get('nacebel_codes', []),
-                'company_activities': activities_data.get('company_activities', []),
-                'sectors': activities_data.get('sectors', []),
-                'services': activities_data.get('services', []),
-                'description': activities_data.get('description', ''),
+                'nacebel_codes': activity_data.get('nacebel_codes', []),
+                'company_activities': activity_data.get('company_activities', []),
+                'sectors': activity_data.get('sectors', []),
+                'services': activity_data.get('services', []),
+                'description': data.get('company_description', ''),
             }
         )
-    
-    # Save establishments if present
-    establishments_data = data.get('establishments', [])
+
+    # Save establishment units if present
+    establishments_data = data.get('establishment_units', []) or []
     for est_data in establishments_data:
-        est_address_data = est_data.get('address', {})
+        est_address_data = est_data.get('establishment_address', {})
         est_address = None
-        
+
         if est_address_data:
             est_address, _ = Address.objects.update_or_create(
                 street=est_address_data.get('street', ''),
                 street_number=est_address_data.get('street_number', ''),
                 postal_code=est_address_data.get('postal_code', ''),
                 city=est_address_data.get('city', ''),
+                postal_box=est_address_data.get('postal_box') or '',  # Ensure not None
                 defaults={
-                    'postal_box': est_address_data.get('postal_box', ''),
                     'province': est_address_data.get('province', ''),
                     'region': est_address_data.get('region', ''),
                     'country': est_address_data.get('country', 'BE'),
                 }
             )
-        
+
         Establishment.objects.update_or_create(
             company=company,
-            unit_number=est_data.get('unit_number', ''),
+            unit_number=est_data.get('establishment_number', ''),
             defaults={
-                'name': est_data.get('name', ''),
+                'name': est_data.get('denomination', ''),
                 'address': est_address,
-                'creation_date': est_data.get('creation_date'),
-                'status': est_data.get('status', 'active'),
+                'creation_date': parse_french_date(est_data.get('date')),
+                'status': 'active' if est_data.get('statut', '').lower() == 'actif' else 'inactive',
             }
         )
-    
+
     # Save financial data if present
-    financial_data_list = data.get('financial_data', [])
-    for fin_data in financial_data_list:
-        FinancialData.objects.update_or_create(
-            company=company,
-            year=fin_data.get('year'),
-            defaults={
-                'revenue': fin_data.get('revenue'),
-                'profit': fin_data.get('profit'),
-                'margin': fin_data.get('margin'),
-                'employees': fin_data.get('employees'),
-                'extra_data': fin_data.get('extra_data', {}),
-            }
-        )
-    
+    if finance_data:
+        gross_margin = finance_data.get('gross_margin')
+        if gross_margin:
+            # Store financial data (AI scraper provides summary data, not yearly)
+            FinancialData.objects.update_or_create(
+                company=company,
+                year=timezone.now().year,  # Use current year as default
+                defaults={
+                    'revenue': gross_margin,
+                    'employees': employees,
+                }
+            )
+
     logger.info(f"{'Created' if created else 'Updated'} company: {company.name} ({company.vat})")
     return company
 
@@ -360,151 +460,3 @@ def update_company_data(company_id: str) -> Dict[str, Any]:
             'status': 'error',
             'error': f'Company {company_id} not found'
         }
-
-
-@shared_task(name='companies.tasks.process_batch_companies')
-def process_batch_companies(vat_numbers: List[str]) -> Dict[str, Any]:
-    """
-    Process multiple company VAT numbers in batch.
-    
-    Args:
-        vat_numbers: List of Belgian VAT numbers
-        
-    Returns:
-        Dict with batch processing results
-    """
-    results = {
-        'total': len(vat_numbers),
-        'processed': 0,
-        'successful': 0,
-        'failed': 0,
-        'tasks': []
-    }
-    
-    for vat_number in vat_numbers:
-        try:
-            task = fetch_company_data.delay(vat_number)
-            results['tasks'].append({
-                'vat_number': vat_number,
-                'task_id': task.id
-            })
-            results['processed'] += 1
-        except Exception as e:
-            logger.error(f"Failed to queue task for VAT {vat_number}: {e}")
-            results['failed'] += 1
-    
-    return results
-
-
-@shared_task(name='companies.tasks.cleanup_stale_data')
-def cleanup_stale_data() -> Dict[str, Any]:
-    """
-    Clean up stale company data and expired cache entries.
-    
-    Returns:
-        Dict with cleanup statistics
-    """
-    stats = {
-        'expired_cache_cleared': 0,
-        'old_financials_deleted': 0,
-        'timestamp': timezone.now().isoformat()
-    }
-    
-    try:
-        # Clear old financial data (keep last 5 years)
-        cutoff_year = timezone.now().year - 5
-        old_financials = FinancialData.objects.filter(year__lt=cutoff_year)
-        stats['old_financials_deleted'] = old_financials.count()
-        old_financials.delete()
-        
-        logger.info(f"Cleanup completed: {stats}")
-        
-    except Exception as e:
-        logger.error(f"Cleanup task failed: {e}")
-        stats['error'] = str(e)
-    
-    return stats
-
-
-@shared_task(name='companies.tasks.update_followed_companies')
-def update_followed_companies() -> Dict[str, Any]:
-    """
-    Update data for all followed companies.
-    
-    Returns:
-        Dict with update statistics
-    """
-    stats = {
-        'total_followed': 0,
-        'updated': 0,
-        'failed': 0,
-        'timestamp': timezone.now().isoformat()
-    }
-    
-    try:
-        # Get unique companies that have followers
-        followed_companies = Company.objects.filter(
-            followers__notify_updates=True
-        ).distinct()
-        
-        stats['total_followed'] = followed_companies.count()
-        
-        for company in followed_companies:
-            try:
-                # Check if update is needed (last update > 24 hours ago)
-                if company.updated_at < timezone.now() - timedelta(hours=24):
-                    update_company_data.delay(company.id)
-                    stats['updated'] += 1
-            except Exception as e:
-                logger.error(f"Failed to update company {company.id}: {e}")
-                stats['failed'] += 1
-        
-        logger.info(f"Followed companies update completed: {stats}")
-        
-    except Exception as e:
-        logger.error(f"Followed companies update task failed: {e}")
-        stats['error'] = str(e)
-    
-    return stats
-
-
-@shared_task(name='companies.tasks.notify_company_update')
-def notify_company_update(company_id: str) -> Dict[str, Any]:
-    """
-    Notify followers when a company is updated.
-    
-    Args:
-        company_id: Company primary key
-        
-    Returns:
-        Dict with notification statistics
-    """
-    stats = {
-        'company_id': company_id,
-        'notifications_sent': 0,
-        'timestamp': timezone.now().isoformat()
-    }
-    
-    try:
-        company = Company.objects.get(id=company_id)
-        followers = CompanyFollower.objects.filter(
-            company=company,
-            notify_updates=True
-        ).select_related('user')
-        
-        for follower in followers:
-            # Here you would send actual notifications
-            # For now, just log it
-            logger.info(f"Would notify user {follower.user.email} about {company.name} update")
-            stats['notifications_sent'] += 1
-        
-        logger.info(f"Notifications sent for company {company_id}: {stats}")
-        
-    except Company.DoesNotExist:
-        logger.error(f"Company not found for notification: {company_id}")
-        stats['error'] = f'Company {company_id} not found'
-    except Exception as e:
-        logger.error(f"Notification task failed for company {company_id}: {e}")
-        stats['error'] = str(e)
-    
-    return stats
