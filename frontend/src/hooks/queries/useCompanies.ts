@@ -33,10 +33,16 @@ export const useCompany = (id: string | undefined) => {
   });
 };
 
+// Polling configuration constants
+const POLLING_INTERVAL_MS = 2000; // Poll every 2 seconds
+const MAX_POLLING_ATTEMPTS = 60; // Max 60 attempts
+const POLLING_TIMEOUT_MS = MAX_POLLING_ATTEMPTS * POLLING_INTERVAL_MS; // 2 minutes total
+
 // Search companies with AI scraper polling support
 export const useCompanySearch = (filters: Partial<SearchFilters>, enabled = true) => {
   const [pollingVat, setPollingVat] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
+  const [pollingError, setPollingError] = useState<string | null>(null);
 
   // Main search query
   const searchQuery = useQuery({
@@ -49,6 +55,7 @@ export const useCompanySearch = (filters: Partial<SearchFilters>, enabled = true
         if (error.status === 202) {
           setPollingVat(error.vat);
           setPollCount(0);
+          setPollingError(null);
           throw error; // Re-throw to show loading state
         }
         throw error;
@@ -62,39 +69,52 @@ export const useCompanySearch = (filters: Partial<SearchFilters>, enabled = true
   const pollingQuery = useQuery({
     queryKey: ['companyFetchStatus', pollingVat],
     queryFn: () => companyApi.checkFetchStatus(pollingVat!),
-    enabled: !!pollingVat && pollCount < 60, // Poll for max 2 minutes (60 * 2s intervals)
-    refetchInterval: 2000, // Poll every 2 seconds
-    onSuccess: (data) => {
-      if (data.status === 'completed' && data.data) {
-        // Fetch completed successfully
-        setPollingVat(null);
-        setPollCount(0);
-        // Invalidate search query to show the new company
-        searchQuery.refetch();
-      } else if (data.status === 'failed') {
-        // Fetch failed
-        setPollingVat(null);
-        setPollCount(0);
-      } else {
-        // Still pending, increment poll count
-        setPollCount(prev => prev + 1);
-      }
-    },
+    enabled: !!pollingVat && pollCount < MAX_POLLING_ATTEMPTS,
+    refetchInterval: POLLING_INTERVAL_MS,
   });
 
-  // Stop polling after max attempts
+  // Handle polling query results
   useEffect(() => {
-    if (pollCount >= 60) {
+    if (!pollingQuery.data || !pollingVat) return;
+
+    const data = pollingQuery.data;
+
+    if (data.status === 'completed' && data.data) {
+      // Fetch completed successfully
+      setPollingVat(null);
+      setPollCount(0);
+      setPollingError(null);
+      // Invalidate search query to show the new company
+      searchQuery.refetch();
+    } else if (data.status === 'failed') {
+      // Fetch failed
+      const errorMsg = data.message || 'La récupération des données a échoué';
+      setPollingError(errorMsg);
+      setPollingVat(null);
+      setPollCount(0);
+    } else {
+      // Still pending, increment poll count
+      setPollCount(prev => prev + 1);
+    }
+  }, [pollingQuery.data, pollingVat]);
+
+  // Stop polling after max attempts and show timeout error
+  useEffect(() => {
+    if (pollCount >= MAX_POLLING_ATTEMPTS && pollingVat) {
+      const timeoutMsg = `La recherche a pris trop de temps (plus de ${POLLING_TIMEOUT_MS / 1000} secondes). Veuillez réessayer plus tard.`;
+      setPollingError(timeoutMsg);
       setPollingVat(null);
       setPollCount(0);
     }
-  }, [pollCount]);
+  }, [pollCount, pollingVat]);
 
   return {
     ...searchQuery,
     isFetching: searchQuery.isFetching || !!pollingVat,
     fetchStatus: pollingVat ? (pollingQuery.data?.status || 'pending') : null,
     fetchMessage: pollingQuery.data?.message,
+    pollingError,
+    clearPollingError: () => setPollingError(null),
   };
 };
 

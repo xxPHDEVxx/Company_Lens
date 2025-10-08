@@ -6,10 +6,41 @@ interface SearchResultsProps {
   searchResults: Company[];
   fetchStatus?: string | null;
   fetchMessage?: string;
+  pollingError?: string | null;
+  onClearPollingError?: () => void;
 }
 
-const SearchResults = ({ isSearching, searchResults, fetchStatus, fetchMessage }: SearchResultsProps) => {
+const SearchResults = ({ isSearching, searchResults, fetchStatus, fetchMessage, pollingError, onClearPollingError }: SearchResultsProps) => {
   const navigate = useNavigate();
+
+  // Show polling error if present
+  if (pollingError) {
+    return (
+      <div className="mt-4 sm:mt-6 bg-white rounded-xl shadow-lg p-4 sm:p-6">
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-red-800">Erreur de recherche</h3>
+              <p className="mt-2 text-sm text-red-700">{pollingError}</p>
+              {onClearPollingError && (
+                <button
+                  onClick={onClearPollingError}
+                  className="mt-3 text-sm font-medium text-red-800 hover:text-red-900 underline"
+                >
+                  Réessayer
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isSearching) {
     return (
@@ -70,8 +101,8 @@ const SearchResults = ({ isSearching, searchResults, fetchStatus, fetchMessage }
 
             <div className="space-y-1 sm:space-y-2 mb-3 sm:mb-4">
               <p className="text-xs sm:text-sm text-gray-600 font-mono break-all">{company.vat}</p>
-              {company.sector && (
-                <p className="text-xs sm:text-sm text-gray-600 truncate">{company.sector}</p>
+              {company.activities?.primarySector && (
+                <p className="text-xs sm:text-sm text-gray-600 truncate">{company.activities.primarySector}</p>
               )}
               {company.city && (
                 <p className="text-xs sm:text-sm text-gray-600 truncate">{company.city}</p>

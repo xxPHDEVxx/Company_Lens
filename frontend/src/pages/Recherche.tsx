@@ -21,7 +21,15 @@ const RechercheContent = () => {
   const [hasSearched, setHasSearched] = useState(false);
 
   // Use React Query hooks
-  const { data: searchResults = [], isLoading: isSearching, isFetching, fetchStatus, fetchMessage } = useCompanySearch(filters, searchEnabled);
+  const {
+    data: searchResults = [],
+    isLoading: isSearching,
+    isFetching,
+    fetchStatus,
+    fetchMessage,
+    pollingError,
+    clearPollingError
+  } = useCompanySearch(filters, searchEnabled);
   const addRecentSearchMutation = useAddRecentSearch();
 
   const handleFilterChange = (key: keyof SearchFilters, value: string) => {
@@ -93,6 +101,8 @@ const RechercheContent = () => {
           searchResults={searchResults}
           fetchStatus={fetchStatus}
           fetchMessage={fetchMessage}
+          pollingError={pollingError}
+          onClearPollingError={clearPollingError}
         />
       )}
 
