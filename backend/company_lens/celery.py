@@ -1,14 +1,11 @@
 """
 Celery configuration for Company Lens.
-Handles asynchronous task processing with RabbitMQ as the message broker.
+Handles asynchronous task processing with Redis as the message broker.
 """
 
 import os
 from celery import Celery
 from celery.signals import setup_logging
-from django.conf import settings
-from kombu import Exchange, Queue
-import logging
 
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'company_lens.settings')
@@ -22,56 +19,9 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Auto-discover tasks from all registered Django apps
 app.autodiscover_tasks()
 
-# Define exchanges for different task types
-default_exchange = Exchange('default', type='direct')
-scraper_exchange = Exchange('scraper', type='topic')
-priority_exchange = Exchange('priority', type='direct')
-
-# Define queues with proper routing
-app.conf.task_queues = (
-    # Default queue for general tasks
-    Queue('default', default_exchange, routing_key='default',
-          queue_arguments={'x-max-priority': 5}),
-    
-    # Scraper queue for AI company data fetching
-    Queue('scraper', scraper_exchange, routing_key='scraper.*',
-          queue_arguments={'x-max-priority': 10}),
-    
-    # High priority queue for urgent tasks
-    Queue('priority', priority_exchange, routing_key='priority',
-          queue_arguments={'x-max-priority': 10}),
-    
-    # Dead letter queue for failed tasks
-    Queue('dead_letter', Exchange('dlx', type='direct'), routing_key='failed',
-          queue_arguments={
-              'x-message-ttl': 86400000,  # 24 hours in milliseconds
-              'x-max-length': 10000
-          }),
-)
-
-# Task routing configuration
-app.conf.task_routes = {
-    'companies.tasks.fetch_company_data': {
-        'queue': 'scraper',
-        'routing_key': 'scraper.company',
-        'priority': 5,
-    },
-    'companies.tasks.update_company_data': {
-        'queue': 'scraper',
-        'routing_key': 'scraper.update',
-        'priority': 3,
-    },
-    'companies.tasks.process_batch_companies': {
-        'queue': 'scraper',
-        'routing_key': 'scraper.batch',
-        'priority': 1,
-    },
-    'companies.tasks.cleanup_stale_data': {
-        'queue': 'default',
-        'routing_key': 'default',
-        'priority': 1,
-    },
-}
+# Simple task priority configuration
+app.conf.task_default_priority = 5
+app.conf.task_inherit_parent_priority = True
 
 # Task execution options
 app.conf.task_annotations = {
