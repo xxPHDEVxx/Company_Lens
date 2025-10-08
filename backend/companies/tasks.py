@@ -185,10 +185,10 @@ def call_ai_scraper(vat_number: str, website: Optional[str] = None) -> Dict[str,
             env={**subprocess.os.environ, 'PYTHONPATH': '.'}
         )
 
-        # Parse JSON output (last line)
+        # Parse JSON output (first line - logs go to stderr)
         try:
             output_lines = result.stdout.strip().split('\n')
-            json_output = output_lines[-1]
+            json_output = output_lines[0]  # JSON is on first line
             scraper_data = json.loads(json_output)
 
             # Check if scraper returned an error

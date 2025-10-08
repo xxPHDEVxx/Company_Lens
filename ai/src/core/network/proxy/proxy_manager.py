@@ -10,7 +10,7 @@ from abc import ABC
 import random
 from loguru import logger
 
-from core.network.proxy.proxy import Proxy
+from src.core.network.proxy.proxy import Proxy
 
 
 class ProxyManager(ABC):
