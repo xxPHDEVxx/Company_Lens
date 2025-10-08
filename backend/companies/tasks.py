@@ -97,7 +97,6 @@ def fetch_company_data(vat_number: str, user_id: Optional[int] = None) -> Dict[s
     # Check if AI scraper is enabled
     if not settings.AI_SCRAPER_ENABLED:
         logger.warning("AI scraper is not enabled, using mock data")
-        return create_mock_company_data(vat_number)
     
     try:
         # Call the AI scraping system
@@ -151,8 +150,7 @@ def call_ai_scraper(vat_number: str, website: Optional[str] = None) -> Dict[str,
     """
     Call the AI scraping system to fetch company data.
 
-    This function interfaces with the AI scraper module using subprocess
-    to execute the Python scraper with Poetry.
+    Uses the CLI entry point for secure execution without dynamic code generation.
 
     Args:
         vat_number: Belgian VAT number (format: BE0123456789 or 0123456789)
@@ -165,85 +163,57 @@ def call_ai_scraper(vat_number: str, website: Optional[str] = None) -> Dict[str,
     ai_scraper_path = Path(settings.AI_SCRAPER_BASE_PATH)
     if not ai_scraper_path.exists():
         logger.warning(f"AI scraper path does not exist: {ai_scraper_path}")
-        return create_mock_company_data(vat_number)
 
     # Clean VAT number (remove BE prefix if present)
     clean_vat = vat_number.replace('BE', '').replace(' ', '')
 
     try:
-        # Prepare Python script to run the scraper
-        python_script = f"""
-import sys
-import json
-sys.path.insert(0, '{ai_scraper_path / 'src'}')
+        logger.info(f"Calling AI scraper for VAT: {clean_vat}")
 
-from src.core.models.scrape.scrape_company_dto import ScrapeCompanyDto
-from src.features.company_scraper.runnable.company_scraper import run
+        # Build command with CLI entry point
+        cmd = ['poetry', 'run', 'scrape-company', '--vat', clean_vat]
+        if website:
+            cmd.extend(['--website', website])
 
-# Create DTO with VAT and optional website
-dto = ScrapeCompanyDto(vat_number="{clean_vat}", website={f'"{website}"' if website else 'None'})
+        # Run the scraper using Poetry CLI entry point
+        result = subprocess.run(
+            cmd,
+            cwd=str(ai_scraper_path),
+            capture_output=True,
+            text=True,
+            timeout=settings.AI_SCRAPER_TIMEOUT,
+            env={**subprocess.os.environ, 'PYTHONPATH': '.'}
+        )
 
-# Run scraper and get results
-result = run(dto)
-
-# Output as JSON
-print(json.dumps(result, ensure_ascii=False))
-"""
-
-        # Write script to temporary file
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-            f.write(python_script)
-            script_path = f.name
-
+        # Parse JSON output (last line)
         try:
-            # Run the scraper using Poetry in the AI directory
-            logger.info(f"Calling AI scraper for VAT: {clean_vat}")
+            output_lines = result.stdout.strip().split('\n')
+            json_output = output_lines[-1]
+            scraper_data = json.loads(json_output)
 
-            result = subprocess.run(
-                ['poetry', 'run', 'python', script_path],
-                cwd=str(ai_scraper_path),
-                capture_output=True,
-                text=True,
-                timeout=settings.AI_SCRAPER_TIMEOUT,
-                env={**subprocess.os.environ, 'PYTHONPATH': str(ai_scraper_path / 'src')}
-            )
-
-            if result.returncode == 0:
-                # Parse JSON output
-                output_lines = result.stdout.strip().split('\n')
-                json_output = output_lines[-1]  # Last line should be JSON
-
-                try:
-                    scraper_data = json.loads(json_output)
-                    logger.info(f"Successfully scraped data for VAT: {clean_vat}")
-
-                    return {
-                        'status': 'success',
-                        'data': scraper_data
-                    }
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse scraper JSON output: {e}")
-                    logger.debug(f"Output: {result.stdout}")
-                    return {
-                        'status': 'error',
-                        'error': f'Invalid JSON from scraper: {str(e)}'
-                    }
-            else:
-                error_msg = result.stderr or result.stdout
+            # Check if scraper returned an error
+            if scraper_data.get('status') == 'failed':
+                error_msg = scraper_data.get('error', 'Unknown error')
                 logger.error(f"AI scraper failed for VAT {clean_vat}: {error_msg}")
                 return {
                     'status': 'error',
-                    'error': f'Scraper process failed: {error_msg[:500]}'  # Limit error message length
+                    'error': error_msg
                 }
 
-        finally:
-            # Clean up temporary file
-            import os
-            try:
-                os.unlink(script_path)
-            except:
-                pass
+            logger.info(f"Successfully scraped data for VAT: {clean_vat}")
+            return {
+                'status': 'success',
+                'data': scraper_data
+            }
+
+        except (json.JSONDecodeError, IndexError) as e:
+            logger.error(f"Failed to parse scraper output: {e}")
+            logger.debug(f"Output: {result.stdout}")
+            logger.debug(f"Stderr: {result.stderr}")
+            return {
+                'status': 'error',
+                'error': f'Invalid output from scraper: {str(e)}'
+            }
 
     except subprocess.TimeoutExpired:
         logger.error(f"AI scraper timeout for VAT {clean_vat}")

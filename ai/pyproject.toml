@@ -259,6 +259,9 @@ langchain-mistralai = "0.2.6"
 pgvector = "^0.4.1"
 pyrefly = "^0.15.2"
 
+[tool.poetry.scripts]
+scrape-company = "src.cli:scrape"
+
 [tool.poetry.group.dev.dependencies]
 deptry = "^0.21.1"
 
