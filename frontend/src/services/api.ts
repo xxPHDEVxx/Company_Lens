@@ -78,11 +78,38 @@ export const companyApi = {
     const response = await fetch(`${API_BASE_URL}/companies/search/?${params}`, {
       headers: getAuthHeaders(),
     });
+
+    // Handle AI scraper integration (HTTP 202 = fetching in progress)
+    if (response.status === 202) {
+      const data = await response.json();
+      // If AI scraper is fetching, throw specific error with metadata
+      const error = new Error('Company is being fetched from external sources') as any;
+      error.status = 202;
+      error.fetchStatus = data.fetch_status;
+      error.taskId = data.task_id;
+      error.vat = data.vat;
+      error.message = data.message || 'Recherche en cours...';
+      throw error;
+    }
+
     if (!response.ok) throw new Error('Failed to search companies');
     const data = await response.json();
     // Transform and handle paginated response
     const transformed = transformResponse(data);
     return transformed.results || transformed;
+  },
+
+  checkFetchStatus: async (vat: string): Promise<{ status: string; data?: Company; message?: string }> => {
+    const response = await fetch(`${API_BASE_URL}/companies/fetch_status/?vat=${vat}`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok && response.status !== 404) {
+      throw new Error('Failed to check fetch status');
+    }
+
+    const data = await response.json();
+    return transformResponse(data);
   },
 
   create: async (company: Partial<Company>): Promise<Company> => {

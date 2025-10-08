@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyApi } from '../../services/api';
 import { queryKeys } from '../../lib/queryClient';
 import type { Company, SearchFilters } from '../../types/api';
+import { useState, useEffect } from 'react';
 
 // Query Hooks
 
@@ -32,13 +33,69 @@ export const useCompany = (id: string | undefined) => {
   });
 };
 
-// Search companies
+// Search companies with AI scraper polling support
 export const useCompanySearch = (filters: Partial<SearchFilters>, enabled = true) => {
-  return useQuery({
+  const [pollingVat, setPollingVat] = useState<string | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+
+  // Main search query
+  const searchQuery = useQuery({
     queryKey: queryKeys.companies.search(filters),
-    queryFn: () => companyApi.search(filters),
+    queryFn: async () => {
+      try {
+        return await companyApi.search(filters);
+      } catch (error: any) {
+        // If AI scraper is fetching (status 202), start polling
+        if (error.status === 202) {
+          setPollingVat(error.vat);
+          setPollCount(0);
+          throw error; // Re-throw to show loading state
+        }
+        throw error;
+      }
+    },
     enabled: enabled && Object.keys(filters).length > 0,
+    retry: false, // Don't retry on 202 status
   });
+
+  // Polling query for AI scraper fetch status
+  const pollingQuery = useQuery({
+    queryKey: ['companyFetchStatus', pollingVat],
+    queryFn: () => companyApi.checkFetchStatus(pollingVat!),
+    enabled: !!pollingVat && pollCount < 60, // Poll for max 2 minutes (60 * 2s intervals)
+    refetchInterval: 2000, // Poll every 2 seconds
+    onSuccess: (data) => {
+      if (data.status === 'completed' && data.data) {
+        // Fetch completed successfully
+        setPollingVat(null);
+        setPollCount(0);
+        // Invalidate search query to show the new company
+        searchQuery.refetch();
+      } else if (data.status === 'failed') {
+        // Fetch failed
+        setPollingVat(null);
+        setPollCount(0);
+      } else {
+        // Still pending, increment poll count
+        setPollCount(prev => prev + 1);
+      }
+    },
+  });
+
+  // Stop polling after max attempts
+  useEffect(() => {
+    if (pollCount >= 60) {
+      setPollingVat(null);
+      setPollCount(0);
+    }
+  }, [pollCount]);
+
+  return {
+    ...searchQuery,
+    isFetching: searchQuery.isFetching || !!pollingVat,
+    fetchStatus: pollingVat ? (pollingQuery.data?.status || 'pending') : null,
+    fetchMessage: pollingQuery.data?.message,
+  };
 };
 
 // Mutation Hooks

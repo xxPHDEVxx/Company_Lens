@@ -4,9 +4,11 @@ import type { Company } from '../../types/api';
 interface SearchResultsProps {
   isSearching: boolean;
   searchResults: Company[];
+  fetchStatus?: string | null;
+  fetchMessage?: string;
 }
 
-const SearchResults = ({ isSearching, searchResults }: SearchResultsProps) => {
+const SearchResults = ({ isSearching, searchResults, fetchStatus, fetchMessage }: SearchResultsProps) => {
   const navigate = useNavigate();
 
   if (isSearching) {
@@ -17,7 +19,21 @@ const SearchResults = ({ isSearching, searchResults }: SearchResultsProps) => {
             <svg className="animate-spin h-6 w-6 sm:h-8 sm:w-8 text-blue-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
-            <p className="text-sm sm:text-base text-gray-600">Recherche en cours...</p>
+            <p className="text-sm sm:text-base text-gray-600">
+              {fetchStatus === 'pending'
+                ? 'Recherche en cours via notre IA...'
+                : 'Recherche en cours...'}
+            </p>
+            {fetchMessage && (
+              <p className="text-xs sm:text-sm text-gray-500 mt-2 text-center max-w-md">
+                {fetchMessage}
+              </p>
+            )}
+            {fetchStatus === 'pending' && (
+              <p className="text-xs sm:text-sm text-gray-500 mt-2 text-center max-w-md">
+                Cette entreprise n'est pas encore dans notre base. Nous la recherchons pour vous...
+              </p>
+            )}
           </div>
         </div>
       </div>
