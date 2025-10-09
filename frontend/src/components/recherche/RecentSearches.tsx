@@ -36,8 +36,8 @@ const RecentSearches = () => {
     // Use company ID if available, fallback to VAT number without 'BE' prefix
     if (companyId && companyId.trim()) {
       navigate(`/company/${companyId}`, {
-        state: { 
-          from: 'Recherche', 
+        state: {
+          from: 'Recherche',
           route: '/recherche'
         }
       });
@@ -46,8 +46,8 @@ const RecentSearches = () => {
       const cleanVat = vat.replace(/^BE/, '');
       console.warn('Using VAT as fallback ID:', cleanVat);
       navigate(`/company/${cleanVat}`, {
-        state: { 
-          from: 'Recherche', 
+        state: {
+          from: 'Recherche',
           route: '/recherche'
         }
       });

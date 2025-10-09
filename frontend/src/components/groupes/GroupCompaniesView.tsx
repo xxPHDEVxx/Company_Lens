@@ -199,10 +199,10 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
   
   const handleViewCompanyDetails = (companyId: string) => {
     navigate(`/company/${companyId}`, {
-      state: { 
-        from: 'Groupes', 
+      state: {
+        from: 'Groupes',
         route: `/groupes/${group.id}`,
-        groupName: group.name 
+        groupName: group.name
       }
     });
   };

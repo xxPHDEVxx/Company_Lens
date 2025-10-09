@@ -118,3 +118,6 @@ frontend/build/
 .DS_Store
 Thumbs.db
 ai/.env
+
+#other
+ISSUES_LOG.md

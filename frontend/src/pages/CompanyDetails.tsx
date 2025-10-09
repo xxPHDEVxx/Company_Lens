@@ -26,13 +26,20 @@ const CompanyDetails = () => {
   useEffect(() => {
     const currentTab = searchParams.get('tab');
     if (currentTab !== activeTab) {
-      setSearchParams({ tab: activeTab }, { replace: true });
+      setSearchParams({ tab: activeTab }, { replace: true, state: location.state });
     }
-  }, [activeTab, searchParams, setSearchParams]);
+  }, [activeTab, searchParams, setSearchParams, location.state]);
   
-  // Determine the source page from location state or default to 'Suivi'
-  const sourcePage = location.state?.from || 'Suivi';
-  const sourceRoute = location.state?.route || '/suivi';
+  // Get the source page name from location state
+  const sourcePage = location.state?.from || 'Retour';
+  const sourceRoute = location.state?.route;
+
+  // Handle back navigation
+  const handleBack = () => {
+    if (sourceRoute) {
+      navigate(sourceRoute);
+    }
+  };
 
   // Use React Query hooks with refetchOnWindowFocus to ensure fresh data
   const { data: company, isLoading, error, refetch } = useCompany(companyId);
@@ -81,7 +88,7 @@ const CompanyDetails = () => {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
                 <button
-                  onClick={() => navigate(sourceRoute)}
+                  onClick={handleBack}
                   className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5 mr-2" />
@@ -112,7 +119,7 @@ const CompanyDetails = () => {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
                 <button
-                  onClick={() => navigate(sourceRoute)}
+                  onClick={handleBack}
                   className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   <ArrowLeft className="w-5 h-5 mr-2" />
@@ -176,7 +183,7 @@ const CompanyDetails = () => {
           <div className="flex items-center justify-between h-14 sm:h-16 gap-2">
             <div className="flex items-center min-w-0">
               <button
-                onClick={() => navigate(sourceRoute)}
+                onClick={handleBack}
                 className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 mr-1 sm:mr-2 flex-shrink-0" />

@@ -49,6 +49,8 @@ const CompanyInfo = () => {
   
   const handleViewDetails = () => {
     if (company) {
+      sessionStorage.setItem('previousPage', 'Tableau de bord');
+      sessionStorage.setItem('previousRoute', '/dashboard');
       navigate(`/company/${company.id}`, {
         state: { from: 'Tableau de bord', route: '/dashboard' }
       });
