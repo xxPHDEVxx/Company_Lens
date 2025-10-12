@@ -1,0 +1,34 @@
+# AI Worker Dockerfile - Celery Worker with Health Check
+FROM python:3.11
+
+WORKDIR /app
+
+# Install Poetry
+RUN pip install poetry==1.8.2
+
+# Copy poetry files
+COPY pyproject.toml poetry.lock* ./
+
+# Configure poetry to not create virtual environment
+RUN poetry config virtualenvs.create false
+
+# Install dependencies
+RUN poetry install --no-interaction --no-ansi --no-root
+
+# Copy application code
+COPY . .
+
+# Install the package
+RUN poetry install --no-interaction --no-ansi
+
+# Set PYTHONPATH
+ENV PYTHONPATH=/app
+
+# Make worker script executable
+RUN chmod +x worker_with_health.py
+
+# Expose port for health check
+EXPOSE 8000
+
+# Run worker with health check
+CMD ["python", "worker_with_health.py"]

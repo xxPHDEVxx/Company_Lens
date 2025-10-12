@@ -55,13 +55,14 @@ services:
         value: "true"
 
   # Django Celery Worker (handles default and priority queues)
-  - type: worker
+  # NOTE: Running as web service for free tier compatibility
+  - type: web
     name: company-lens-celery-worker
     env: docker
     plan: free
-    dockerfilePath: ./backend/Dockerfile
+    dockerfilePath: ./backend/Dockerfile.worker
     dockerContext: ./backend
-    dockerCommand: celery -A company_lens worker --loglevel=info --concurrency=2 --queues=default,priority
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -84,14 +85,18 @@ services:
           property: connectionString
       - key: SECRET_KEY
         generateValue: true
+      - key: WORKER_TYPE
+        value: "django"
 
   # AI Celery Worker (handles scraper queue with ML dependencies)
-  - type: worker
+  # NOTE: Running as web service for free tier compatibility
+  - type: web
     name: company-lens-ai-worker
     env: docker
     plan: free
-    dockerfilePath: ./ai/Dockerfile
+    dockerfilePath: ./ai/Dockerfile.worker
     dockerContext: ./ai
+    healthCheckPath: /health
     envVars:
       - key: CELERY_BROKER_URL
         fromService:
@@ -122,6 +127,8 @@ services:
         sync: false
       - key: environment
         value: "Production"
+      - key: WORKER_TYPE
+        value: "ai"
 
   # Weekly Company Data Refresh Cron Job
   - type: cron
