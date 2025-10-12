@@ -258,6 +258,7 @@ PyPDF2 = "3.0.1"
 langchain-mistralai = "0.2.6"
 pgvector = "^0.4.1"
 pyrefly = "^0.15.2"
+celery = "^5.4.0"
 
 [tool.poetry.scripts]
 scrape-company = "src.cli:scrape"
