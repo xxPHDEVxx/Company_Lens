@@ -118,10 +118,11 @@ class AddressResolver:
         try:
             # Extract the individual result from the batch by index
             result_item = batch_results[index]
-            
-            # Retrieve the "results" field from the "response" dictionary. 
-            # If "response" or "results" is missing, default to an empty list.
-            results: list = result_item.get("response", {}).get("results", [])
+
+            # Retrieve the "results" field from the "response" dictionary.
+            # If "response" or "results" is missing or None, default to an empty list.
+            response = result_item.get("response") or {}
+            results: list = response.get("results") or []
             results.sort(key=lambda x: x.get("score", 0), reverse=True)
             # If the "results" list is empty (no geocoding results found), log a warning and return None.
             if not results:
@@ -251,6 +252,11 @@ class AddressResolver:
         """
 
         try:
+            # Handle None or empty input
+            if not postal_code_str:
+                logging.error(f"Invalid or malformed postal code: {postal_code_str}")
+                return None
+
             # Case where multiple postal codes are separated by commas
             if "," in postal_code_str:
                 last_postal = postal_code_str.split(",")[-1].strip()
@@ -262,7 +268,7 @@ class AddressResolver:
             _ = int(last_postal)
             return last_postal
 
-        except (ValueError, AttributeError):
+        except (ValueError, AttributeError, TypeError):
             logging.error(f"Invalid or malformed postal code: {postal_code_str}")
             return None
 
