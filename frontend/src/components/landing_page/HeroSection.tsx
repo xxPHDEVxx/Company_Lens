@@ -67,15 +67,6 @@ const HeroSection = () => {
             <span className="relative z-10">Commencer gratuitement</span>
             <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </button>
-          
-          <button 
-            onClick={() => navigate('/login')}
-            className="group px-8 py-4 text-lg font-semibold text-gray-700 bg-white rounded-xl border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transform hover:-translate-y-1 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-gray-300 focus:ring-opacity-50">
-            <span className="flex items-center">
-              <Icons.demo className="mr-2 h-5 w-5" />
-              Voir une démo
-            </span>
-          </button>
         </div>
         
         <div className="mt-12 flex items-center justify-center space-x-8 text-sm text-gray-500">
@@ -89,7 +80,7 @@ const HeroSection = () => {
           </div>
           <div className="flex items-center">
             <Icons.checkCircle className="h-5 w-5 text-green-500 mr-2" />
-            Support 24/7
+            Support prochainement disponible
           </div>
         </div>
       </div>

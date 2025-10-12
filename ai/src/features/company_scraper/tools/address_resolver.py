@@ -10,11 +10,6 @@ from src.features.company_scraper.tools.utils import safe_request, find_region
 import re
 
 AZURE_MAP_KEY = os.getenv("AZURE_MAPS_SUBSCRIPTION_KEY")
-if AZURE_MAP_KEY is None:
-    raise ValueError(
-        "AZURE_MAPS_SUBSCRIPTION_KEY is not set in environment variables. "
-        "Please set it to use the AddressResolver."
-    )
 
 
 class AddressResolver:
@@ -62,14 +57,19 @@ class AddressResolver:
     """
 
     def __init__(self, addresses: list[str]):
-        """_summary_
+        """Initialize the AddressResolver with a list of addresses.
 
         Args:
             addresses (list[str]): A list of address strings to be geocoded.
 
         Raises:
-            ValueError: _description_
+            ValueError: If AZURE_MAPS_SUBSCRIPTION_KEY is not set.
         """
+        if AZURE_MAP_KEY is None:
+            raise ValueError(
+                "AZURE_MAPS_SUBSCRIPTION_KEY is not set in environment variables. "
+                "Please set it to use the AddressResolver."
+            )
 
         self.address = [address for address in addresses if address.strip() != "" ]
 
