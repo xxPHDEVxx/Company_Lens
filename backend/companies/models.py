@@ -129,7 +129,7 @@ class Company(models.Model):
     )
     legal_form = models.CharField(
         _('legal form'),
-        max_length=20,
+        max_length=100,
         choices=LEGAL_FORM_CHOICES,
         blank=True
     )
