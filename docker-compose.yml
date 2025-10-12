@@ -68,13 +68,13 @@ services:
       - company_lens_network
     restart: unless-stopped
 
-  # Celery Worker
+  # Celery Worker (Django Backend)
   celery_worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: company_lens_celery_worker
-    command: celery -A company_lens worker --loglevel=info --concurrency=4 --queues=default,scraper,priority
+    command: celery -A company_lens worker --loglevel=info --concurrency=2 --queues=default,priority
     env_file:
       - ./backend/.env
     environment:
@@ -114,6 +114,25 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - company_lens_network
+    restart: unless-stopped
+
+  # AI Scraper Worker
+  ai_worker:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile
+    container_name: company_lens_ai_worker
+    env_file:
+      - ./ai/.env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/1
+    depends_on:
       redis:
         condition: service_healthy
     networks:
