@@ -103,10 +103,25 @@ services:
           type: redis
           name: company-lens-redis
           property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: company-lens-redis
+          property: connectionString
       - key: OPENAI_API_KEY
         sync: false
       - key: AZURE_MAPS_SUBSCRIPTION_KEY
         sync: false
+      - key: LANGCHAIN_TRACING_V2
+        value: "true"
+      - key: LANGSMITH_ENDPOINT
+        value: "https://eu.api.smith.langchain.com"
+      - key: LANGCHAIN_PROJECT
+        value: "Company Lens - Production"
+      - key: LANGSMITH_API_KEY
+        sync: false
+      - key: environment
+        value: "Production"
 
   # React Frontend
   - type: web
