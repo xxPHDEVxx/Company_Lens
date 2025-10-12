@@ -23,16 +23,16 @@ class Address(models.Model):
     city = models.CharField(_('city'), max_length=100, blank=True)
     province = models.CharField(_('province'), max_length=100, blank=True)
     region = models.CharField(
-        _('region'), 
-        max_length=20, 
+        _('region'),
+        max_length=20,
         choices=[
             ('flanders', _('Flanders')),
             ('wallonia', _('Wallonia')),
             ('brussels', _('Brussels')),
-        ], 
+        ],
         blank=True
     )
-    country = models.CharField(_('country'), max_length=2, default='BE')
+    country = models.CharField(_('country'), max_length=30, default='Belgique')
     
     # Timestamps
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)
