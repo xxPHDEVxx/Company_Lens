@@ -1,0 +1,5 @@
+#!/bin/bash
+# Shortcut wrapper for celery_manager.py
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python3 "$SCRIPT_DIR/scripts/celery_manager.py" "$@"
