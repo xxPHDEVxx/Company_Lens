@@ -4,11 +4,8 @@ Integrates with the AI scraping system to fetch Belgian company data.
 """
 
 import logging
-import json
-import subprocess
 from typing import Dict, Any, Optional, List
 from datetime import timedelta, datetime
-from pathlib import Path
 
 from celery import shared_task, Task
 from celery.exceptions import SoftTimeLimitExceeded
@@ -56,177 +53,6 @@ class CompanyFetchTask(Task):
             'timestamp': timezone.now().isoformat(),
             'task_id': task_id
         }, timeout=3600)  # Keep for 1 hour
-
-
-@shared_task(base=CompanyFetchTask, name='companies.tasks.fetch_company_data')
-def fetch_company_data(vat_number: str, user_id: Optional[int] = None) -> Dict[str, Any]:
-    """
-    Fetch company data from the AI scraping system.
-    
-    Args:
-        vat_number: Belgian VAT number (format: BE0123456789)
-        user_id: Optional user ID who requested the fetch
-    
-    Returns:
-        Dict containing the fetched company data or error information
-    """
-    logger.info(f"Starting company data fetch for VAT: {vat_number}")
-    
-    # Check if we have recent data in cache
-    cache_key = f"company_data:{vat_number}"
-    cached_data = cache.get(cache_key)
-    if cached_data:
-        logger.info(f"Returning cached data for VAT: {vat_number}")
-        return cached_data
-    
-    # Check if company already exists in database
-    try:
-        company = Company.objects.get(vat=vat_number)
-        # Check if data is recent (less than 24 hours old)
-        if company.updated_at > timezone.now() - timedelta(hours=24):
-            logger.info(f"Company {vat_number} data is recent, skipping fetch")
-            serializer = CompanyDetailSerializer(company)
-            return {
-                'status': 'existing',
-                'data': serializer.data,
-                'source': 'database'
-            }
-    except Company.DoesNotExist:
-        pass
-    
-    # Check if AI scraper is enabled
-    if not settings.AI_SCRAPER_ENABLED:
-        logger.warning("AI scraper is not enabled, using mock data")
-    
-    try:
-        # Call the AI scraping system
-        result = call_ai_scraper(vat_number)
-        
-        if result and result.get('status') == 'success':
-            # Process and save the company data
-            company = save_company_from_scraper_data(result.get('data', {}), vat_number)
-            
-            # Cache the result
-            serializer = CompanyDetailSerializer(company)
-            cache.set(cache_key, {
-                'status': 'success',
-                'data': serializer.data,
-                'source': 'ai_scraper'
-            }, timeout=settings.COMPANY_DATA_CACHE_TTL)
-            
-            logger.info(f"Successfully fetched and saved company data for VAT: {vat_number}")
-            
-            return {
-                'status': 'success',
-                'data': serializer.data,
-                'source': 'ai_scraper'
-            }
-        else:
-            error_msg = result.get('error', 'Unknown error from AI scraper')
-            logger.error(f"AI scraper failed for VAT {vat_number}: {error_msg}")
-            return {
-                'status': 'error',
-                'error': error_msg,
-                'vat_number': vat_number
-            }
-            
-    except SoftTimeLimitExceeded:
-        logger.error(f"Task timeout while fetching VAT {vat_number}")
-        return {
-            'status': 'error',
-            'error': 'Request timeout - company data fetch took too long',
-            'vat_number': vat_number
-        }
-    except Exception as e:
-        logger.exception(f"Unexpected error fetching VAT {vat_number}: {e}")
-        return {
-            'status': 'error',
-            'error': str(e),
-            'vat_number': vat_number
-        }
-
-
-def call_ai_scraper(vat_number: str, website: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Call the AI scraping system to fetch company data.
-
-    Uses the CLI entry point for secure execution without dynamic code generation.
-
-    Args:
-        vat_number: Belgian VAT number (format: BE0123456789 or 0123456789)
-        website: Optional company website URL
-
-    Returns:
-        Dict containing status and company data or error information
-    """
-    # Check if AI scraper path exists
-    ai_scraper_path = Path(settings.AI_SCRAPER_BASE_PATH)
-    if not ai_scraper_path.exists():
-        logger.warning(f"AI scraper path does not exist: {ai_scraper_path}")
-
-    # Clean VAT number (remove BE prefix if present)
-    clean_vat = vat_number.replace('BE', '').replace(' ', '')
-
-    try:
-        logger.info(f"Calling AI scraper for VAT: {clean_vat}")
-
-        # Build command with CLI entry point
-        cmd = ['poetry', 'run', 'scrape-company', '--vat', clean_vat]
-        if website:
-            cmd.extend(['--website', website])
-
-        # Run the scraper using Poetry CLI entry point
-        result = subprocess.run(
-            cmd,
-            cwd=str(ai_scraper_path),
-            capture_output=True,
-            text=True,
-            timeout=settings.AI_SCRAPER_TIMEOUT,
-            env={**subprocess.os.environ, 'PYTHONPATH': '.'}
-        )
-
-        # Parse JSON output (first line - logs go to stderr)
-        try:
-            output_lines = result.stdout.strip().split('\n')
-            json_output = output_lines[0]  # JSON is on first line
-            scraper_data = json.loads(json_output)
-
-            # Check if scraper returned an error
-            if scraper_data.get('status') == 'failed':
-                error_msg = scraper_data.get('error', 'Unknown error')
-                logger.error(f"AI scraper failed for VAT {clean_vat}: {error_msg}")
-                return {
-                    'status': 'error',
-                    'error': error_msg
-                }
-
-            logger.info(f"Successfully scraped data for VAT: {clean_vat}")
-            return {
-                'status': 'success',
-                'data': scraper_data
-            }
-
-        except (json.JSONDecodeError, IndexError) as e:
-            logger.error(f"Failed to parse scraper output: {e}")
-            logger.debug(f"Output: {result.stdout}")
-            logger.debug(f"Stderr: {result.stderr}")
-            return {
-                'status': 'error',
-                'error': f'Invalid output from scraper: {str(e)}'
-            }
-
-    except subprocess.TimeoutExpired:
-        logger.error(f"AI scraper timeout for VAT {clean_vat}")
-        return {
-            'status': 'error',
-            'error': f'Scraper timeout after {settings.AI_SCRAPER_TIMEOUT} seconds'
-        }
-    except Exception as e:
-        logger.error(f"Error calling AI scraper: {e}")
-        return {
-            'status': 'error',
-            'error': str(e)
-        }
 
 
 def parse_french_date(date_str: Optional[str]) -> Optional[str]:
@@ -293,9 +119,9 @@ def save_company_from_scraper_data(data: Dict[str, Any], vat_number: str) -> Com
             city=address_data.get('city', ''),
             postal_box=address_data.get('postal_box') or '',  # Ensure not None
             defaults={
-                'province': address_data.get('province', ''),
-                'region': address_data.get('region', ''),
-                'country': address_data.get('country', 'BE'),
+                'province': address_data.get('province') or '',  # Handle None
+                'region': address_data.get('region') or '',  # Handle None
+                'country': address_data.get('country') or 'BE',  # Handle None
             }
         )
 
@@ -370,9 +196,9 @@ def save_company_from_scraper_data(data: Dict[str, Any], vat_number: str) -> Com
                 city=est_address_data.get('city', ''),
                 postal_box=est_address_data.get('postal_box') or '',  # Ensure not None
                 defaults={
-                    'province': est_address_data.get('province', ''),
-                    'region': est_address_data.get('region', ''),
-                    'country': est_address_data.get('country', 'BE'),
+                    'province': est_address_data.get('province') or '',  # Handle None
+                    'region': est_address_data.get('region') or '',  # Handle None
+                    'country': est_address_data.get('country') or 'BE',  # Handle None
                 }
             )
 
@@ -405,28 +231,164 @@ def save_company_from_scraper_data(data: Dict[str, Any], vat_number: str) -> Com
     return company
 
 
-@shared_task(name='companies.tasks.update_company_data')
-def update_company_data(company_id: str) -> Dict[str, Any]:
+@shared_task(name='companies.tasks.process_scraped_data')
+def process_scraped_data(scraper_result: Dict[str, Any], vat_number: str) -> Dict[str, Any]:
     """
-    Update existing company data from the AI scraper.
-    
+    Process and save scraped company data.
+    This task is called as a callback after AI scraping completes.
+
     Args:
-        company_id: Company primary key
-        
+        scraper_result: Result from AI scraper
+        vat_number: Belgian VAT number (will be normalized to BE format)
+
     Returns:
-        Dict with update status
+        Dict with status and saved company data
     """
+    # Normalize VAT to BE format for consistency
+    clean_vat = vat_number.upper().replace(' ', '').replace('.', '')
+    if not clean_vat.startswith('BE'):
+        clean_vat = 'BE' + clean_vat.lstrip('0')
+    if clean_vat.startswith('BE') and len(clean_vat) < 12:
+        clean_vat = 'BE' + clean_vat[2:].zfill(10)
+
+    logger.info(f"Processing scraped data for VAT: {vat_number} (normalized: {clean_vat})")
+
     try:
-        company = Company.objects.get(id=company_id)
-        result = fetch_company_data.delay(company.vat)
-        return {
-            'status': 'scheduled',
-            'task_id': result.id,
-            'company_id': company_id
+        # Check if scraper returned an error
+        if isinstance(scraper_result, dict) and scraper_result.get('status') == 'failed':
+            error_msg = scraper_result.get('error', 'Unknown error')
+            logger.error(f"AI scraper failed for VAT {clean_vat}: {error_msg}")
+
+            # Store failure in cache
+            cache.set(f"company_fetch_failed:{clean_vat}", {
+                'error': error_msg,
+                'timestamp': timezone.now().isoformat()
+            }, timeout=3600)
+
+            return {
+                'status': 'error',
+                'error': error_msg,
+                'vat_number': clean_vat
+            }
+
+        # Process and save the company data with normalized VAT
+        company = save_company_from_scraper_data(scraper_result, clean_vat)
+
+        # Cache the result
+        serializer = CompanyDetailSerializer(company)
+        result_data = {
+            'status': 'success',
+            'data': serializer.data,
+            'source': 'ai_scraper'
         }
-    except Company.DoesNotExist:
-        logger.error(f"Company not found: {company_id}")
+
+        cache_key = f"company_data:{clean_vat}"
+        cache.set(cache_key, result_data, timeout=settings.COMPANY_DATA_CACHE_TTL)
+
+        # Update fetch status in cache to "completed"
+        fetch_status_key = f"fetch_status:{clean_vat}"
+        cache.set(fetch_status_key, {
+            'status': 'completed',
+            'data': serializer.data,
+            'timestamp': timezone.now().isoformat()
+        }, timeout=300)
+
+        logger.info(f"Successfully processed and saved company data for VAT: {clean_vat}")
+        return result_data
+
+    except Exception as e:
+        logger.exception(f"Error processing scraped data for VAT {clean_vat}: {e}")
+
+        # Store failure in cache
+        cache.set(f"company_fetch_failed:{clean_vat}", {
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        }, timeout=3600)
+
         return {
             'status': 'error',
-            'error': f'Company {company_id} not found'
+            'error': str(e),
+            'vat_number': clean_vat
         }
+
+
+@shared_task(
+    base=CompanyFetchTask,
+    name='companies.tasks.fetch_company_data_async',
+    time_limit=300,
+    soft_time_limit=240
+)
+def fetch_company_data_async(vat_number: str, user_id: Optional[int] = None) -> Dict[str, Any]:
+    """
+    Async Celery task that orchestrates company data fetching using task callbacks.
+    This task launches the AI scraper with a callback to process the results.
+
+    Args:
+        vat_number: Belgian VAT number (format: BE0123456789)
+        user_id: Optional user ID who requested the fetch
+
+    Returns:
+        Dict with task information
+    """
+    logger.info(f"Starting async company data fetch for VAT: {vat_number}")
+
+    # Check if we have recent data in cache
+    cache_key = f"company_data:{vat_number}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        logger.info(f"Returning cached data for VAT: {vat_number}")
+        return cached_data
+
+    # Check if company already exists in database
+    try:
+        company = Company.objects.get(vat=vat_number)
+        # Check if data is recent (less than 24 hours old)
+        if company.updated_at > timezone.now() - timedelta(hours=24):
+            logger.info(f"Company {vat_number} data is recent, skipping fetch")
+            serializer = CompanyDetailSerializer(company)
+            return {
+                'status': 'existing',
+                'data': serializer.data,
+                'source': 'database'
+            }
+    except Company.DoesNotExist:
+        pass
+
+    # VAT Format Flow:
+    # 1. Frontend sends: BE0684773280
+    # 2. We remove BE prefix here: 0684773280 (for AI scraper compatibility)
+    # 3. AI scraper processes: 0684773280
+    # 4. Backend callback normalizes back to: BE0684773280 (in process_scraped_data)
+    # 5. Database stores: BE0684773280
+    clean_vat = vat_number.replace('BE', '').replace(' ', '')
+
+    try:
+        logger.info(f"Launching AI scraper task for VAT: {clean_vat}")
+
+        from celery import current_app
+
+        # Send AI scraper task (it will manually trigger the callback when done)
+        result = current_app.send_task(
+            'ai_scraper.tasks.scrape_company',
+            args=[clean_vat],
+            queue='scraper'
+        )
+
+        logger.info(f"AI scraper task launched for VAT {vat_number}, task_id: {result.id}")
+
+        return {
+            'status': 'pending',
+            'task_id': result.id,
+            'vat_number': vat_number,
+            'message': 'Scraping initiated'
+        }
+
+    except Exception as e:
+        logger.exception(f"Error launching async fetch for VAT {vat_number}: {e}")
+        return {
+            'status': 'error',
+            'error': str(e),
+            'vat_number': vat_number
+        }
+
+
