@@ -1,4 +1,5 @@
 from langsmith import traceable
+from loguru import logger
 from src.core.models.scrape.scrape_company_dto import ScrapeCompanyDto
 from src.features.company_scraper.runnable.legal_data import LegalDataExtractor
 from src.features.company_scraper.runnable.company_description import (
@@ -26,6 +27,11 @@ def run(fields: ScrapeCompanyDto) -> CompanySchema:
 
     legal_extractor = LegalDataExtractor(fields.vat_number, fields.website)
     company_data: CompanySchema = legal_extractor.get_company_schema()
+
+    # If scraping failed (e.g., address resolution failed), return None
+    if company_data is None:
+        logger.error(f"Failed to scrape company data for VAT {fields.vat_number}")
+        return None
 
     website_extractor = CompanyWebsiteExtractor()
     if fields.website:
