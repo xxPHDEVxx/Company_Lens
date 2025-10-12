@@ -19,6 +19,12 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Auto-discover tasks from all registered Django apps
 app.autodiscover_tasks()
 
+# Task routing configuration
+app.conf.task_routes = {
+    'companies.tasks.*': {'queue': 'default'},
+    'ai_scraper.tasks.*': {'queue': 'scraper'},
+}
+
 # Simple task priority configuration
 app.conf.task_default_priority = 5
 app.conf.task_inherit_parent_priority = True

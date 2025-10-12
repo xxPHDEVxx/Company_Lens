@@ -294,20 +294,9 @@ LOGGING = {
 # Create logs directory if it doesn't exist
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 
-# Celery Configuration
-# Supports both RabbitMQ (local development) and Redis (production/Render)
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='amqp://guest:guest@localhost:5672//')
-
-# Auto-configure result backend based on broker
-# - If using Redis as broker, use Redis for results too
-# - If using RabbitMQ, use Django DB for results
-_broker_url = CELERY_BROKER_URL
-if _broker_url.startswith('redis://'):
-    # Redis broker -> use Redis for results
-    CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=_broker_url)
-else:
-    # RabbitMQ or other broker -> use Django DB for results
-    CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='django-db')
+# Celery Configuration with Redis
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/1')
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -323,13 +312,10 @@ CELERY_TASK_TIME_LIMIT = 300  # 5 minutes
 CELERY_TASK_MAX_RETRIES = 3
 CELERY_TASK_DEFAULT_RETRY_DELAY = 60  # 60 seconds
 
-# Broker connection settings (works for both RabbitMQ and Redis)
+# Broker connection settings
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BROKER_CONNECTION_RETRY = True
 CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
-
-# RabbitMQ specific settings (ignored when using Redis)
-CELERY_BROKER_HEARTBEAT = 30
 
 # Redis cache for Celery (optional, for result caching)
 CELERY_CACHE_BACKEND = 'default'
