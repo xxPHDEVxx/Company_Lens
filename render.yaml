@@ -54,14 +54,68 @@ services:
       - key: LOAD_DEMO_DATA
         value: "true"
 
-  # Celery Worker
+  # Django Celery Worker (handles default and priority queues)
   - type: worker
     name: company-lens-celery-worker
     env: docker
     plan: free
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    dockerCommand: celery -A company_lens worker --loglevel=info --concurrency=1 --queues=default,scraper,priority
+    dockerCommand: celery -A company_lens worker --loglevel=info --concurrency=2 --queues=default,priority
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: company-lens-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: company-lens-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: company-lens-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: company-lens-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+
+  # AI Celery Worker (handles scraper queue with ML dependencies)
+  - type: worker
+    name: company-lens-ai-worker
+    env: docker
+    plan: free
+    dockerfilePath: ./ai/Dockerfile
+    dockerContext: ./ai
+    envVars:
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: company-lens-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: company-lens-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AZURE_MAPS_SUBSCRIPTION_KEY
+        sync: false
+
+  # Celery Beat Scheduler (handles periodic tasks)
+  - type: worker
+    name: company-lens-celery-beat
+    env: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: celery -A company_lens beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     envVars:
       - key: DATABASE_URL
         fromDatabase:
