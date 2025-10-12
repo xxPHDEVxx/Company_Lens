@@ -162,6 +162,12 @@ class LegalDataExtractor:
         operating_hq_address = self.__address_resolver.resolve_single(
             general_information.address
         )
+
+        # Stop scraping if address resolution failed
+        if operating_hq_address is None:
+            logging.error(f"Address resolution failed for VAT {self.vat_number}, aborting scraping")
+            return None
+
         if legal_data_process.financial_data_and_size is not None:
             general_information.company_size = CompanySizeComputer().compute_size(
                 legal_data_process.financial_data_and_size
