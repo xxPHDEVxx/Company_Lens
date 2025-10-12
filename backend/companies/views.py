@@ -26,11 +26,10 @@ from .serializers import (
     FollowedCompanySerializer
 )
 try:
-    from .tasks import fetch_company_data, update_company_data
+    from .tasks import fetch_company_data_async
 except ImportError:
     # Celery tasks not available
-    fetch_company_data = None
-    update_company_data = None
+    fetch_company_data_async = None
 
 logger = logging.getLogger(__name__)
 
@@ -212,60 +211,39 @@ class CompanyViewSet(viewsets.ModelViewSet):
                     'error': failed_data.get('error', 'Unknown error')
                 }, status=status.HTTP_404_NOT_FOUND)
             
-            # Trigger async fetch
+            # Trigger async fetch with Celery
             try:
-                from django.conf import settings
-                
-                # Use synchronous execution if CELERY_ALWAYS_EAGER is True (for testing)
-                if settings.CELERY_TASK_ALWAYS_EAGER:
-                    result = fetch_company_data(clean_vat, user_id=request.user.id)
-                    if result.get('status') == 'success':
-                        # Company was fetched successfully, re-run the query
-                        queryset = Company.objects.filter(vat=clean_vat)
-                        if queryset.exists():
-                            serializer = CompanyListSerializer(queryset, many=True, context={'request': request})
-                            return Response({
-                                'results': serializer.data,
-                                'count': 1,
-                                'fetch_status': 'completed',
-                                'source': 'ai_scraper'
-                            })
-                else:
-                    # Async execution with Celery
-                    if fetch_company_data:
-                        task = fetch_company_data.delay(clean_vat, user_id=request.user.id)
-                    else:
-                        # Celery not available, return mock data
-                        return Response({
-                            'status': 'mock',
-                            'message': 'Celery not configured, returning mock data',
-                            'company': {
-                                'vat': clean_vat,
-                                'name': f'Mock Company {clean_vat}',
-                                'status': 'active',
-                                'city': 'Brussels'
-                            }
-                        }, status=status.HTTP_200_OK)
-                    
-                    # Store fetch status in cache
-                    cache.set(fetch_status_key, {
-                        'status': 'pending',
-                        'task_id': task.id,
-                        'vat': clean_vat,
-                        'timestamp': timezone.now().isoformat()
-                    }, timeout=300)  # 5 minutes
-                    
-                    logger.info(f"Triggered async fetch for VAT {clean_vat}, task_id: {task.id}")
-                    
+                if fetch_company_data_async is None:
+                    logger.error("Celery tasks not available")
                     return Response({
                         'results': [],
                         'count': 0,
-                        'fetch_status': 'pending',
-                        'message': _('Company not found in database. Fetching from external sources...'),
-                        'task_id': task.id,
-                        'vat': clean_vat
-                    }, status=status.HTTP_202_ACCEPTED)
-                    
+                        'fetch_status': 'error',
+                        'message': _('Background task system not available'),
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                # Launch task asynchronously (returns immediately)
+                task = fetch_company_data_async.delay(clean_vat, user_id=request.user.id)
+
+                # Store fetch status in cache
+                cache.set(fetch_status_key, {
+                    'status': 'pending',
+                    'task_id': task.id,
+                    'vat': clean_vat,
+                    'timestamp': timezone.now().isoformat()
+                }, timeout=300)  # 5 minutes
+
+                logger.info(f"Triggered async fetch for VAT {clean_vat}, task_id: {task.id}")
+
+                return Response({
+                    'results': [],
+                    'count': 0,
+                    'fetch_status': 'pending',
+                    'message': _('Company not found in database. Fetching from external sources...'),
+                    'task_id': task.id,
+                    'vat': clean_vat
+                }, status=status.HTTP_202_ACCEPTED)
+
             except Exception as e:
                 logger.error(f"Failed to trigger fetch for VAT {clean_vat}: {e}")
                 return Response({
