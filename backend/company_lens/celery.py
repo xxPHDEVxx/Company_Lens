@@ -43,24 +43,6 @@ app.conf.task_annotations = {
     },
 }
 
-# Celery beat schedule for periodic tasks
-app.conf.beat_schedule = {
-    'cleanup-stale-data': {
-        'task': 'companies.tasks.cleanup_stale_data',
-        'schedule': 86400.0,  # Run once per day
-        'options': {
-            'expires': 3600.0,  # Expire if not run within an hour
-        }
-    },
-    'update-followed-companies': {
-        'task': 'companies.tasks.update_followed_companies',
-        'schedule': 3600.0,  # Run every hour
-        'options': {
-            'expires': 1800.0,  # Expire if not run within 30 minutes
-        }
-    },
-}
-
 # Configure result backend for task results
 app.conf.task_track_started = True
 app.conf.task_send_sent_event = True

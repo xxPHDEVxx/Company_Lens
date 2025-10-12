@@ -108,37 +108,6 @@ services:
       - key: AZURE_MAPS_SUBSCRIPTION_KEY
         sync: false
 
-  # Celery Beat Scheduler (handles periodic tasks)
-  - type: worker
-    name: company-lens-celery-beat
-    env: docker
-    plan: free
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
-    dockerCommand: celery -A company_lens beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: company-lens-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: company-lens-redis
-          property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          type: redis
-          name: company-lens-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: redis
-          name: company-lens-redis
-          property: connectionString
-      - key: SECRET_KEY
-        generateValue: true
-
   # React Frontend
   - type: web
     name: company-lens-frontend
