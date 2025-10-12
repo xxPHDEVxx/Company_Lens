@@ -42,11 +42,5 @@ class ChatModelFactory:
             company_scrapper= ChatOpenAI(
                 model_name="gpt-4o-mini",
                 temperature=0
-            ),
-            mistral= AzureAIChatCompletionsModel(
-                endpoint=os.getenv("AZURE_AI_ENDPOINT", "https://subaltaaihub8435037644.services.ai.azure.com/models"),
-                model_name="mistral-small-2503",
-                credential=os.getenv("AZURE_AI_CREDENTIAL"),
-                temperature=0
             )
         )
