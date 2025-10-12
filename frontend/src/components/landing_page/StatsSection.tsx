@@ -3,60 +3,23 @@ import { Icons } from '../../utils/icons';
 const stats = [
   {
     id: 1,
-    name: 'Entreprises analysées',
+    name: 'Entreprises à analyser',
     value: '250K+',
     description: 'Entreprises belges dans notre base de données',
     icon: <Icons.building className="h-6 w-6" />,
   },
   {
     id: 2,
-    name: 'Rapports générés',
-    value: '500K+',
-    description: 'Rapports détaillés créés pour nos utilisateurs',
-    icon: <Icons.document className="h-6 w-6" />,
-  },
-  {
-    id: 3,
-    name: 'Utilisateurs actifs',
-    value: '15K+',
-    description: 'Professionnels qui nous font confiance',
-    icon: <Icons.users className="h-6 w-6" />,
-  },
-  {
-    id: 4,
     name: 'Précision des données',
-    value: '99.9%',
+    value: '+90%',
     description: 'Fiabilité de nos informations',
     icon: <Icons.checkCircleOutline className="h-6 w-6" />,
   },
 ];
 
-const trustedBy = [
-  { name: 'BNP Paribas Fortis', logo: '🏦' },
-  { name: 'KBC Bank', logo: '🏛️' },
-  { name: 'Belfius', logo: '🏢' },
-  { name: 'ING Belgium', logo: '🦁' },
-  { name: 'Deloitte Belgium', logo: '📊' },
-  { name: 'PwC Belgium', logo: '⚖️' },
-];
-
 const StatsSection = () => (
   <div className="bg-white py-24 sm:py-32">
     <div className="mx-auto max-w-7xl px-6 lg:px-8">
-      {/* Trust indicators */}
-      <div className="mx-auto max-w-2xl text-center mb-20">
-        <h2 className="text-base font-semibold leading-7 text-gray-600 uppercase tracking-wide">
-          Ils nous font confiance
-        </h2>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-8 sm:gap-12">
-          {trustedBy.map((company) => (
-            <div key={company.name} className="flex items-center space-x-3 text-gray-500 hover:text-blue-600 transition-colors duration-200">
-              <span className="text-2xl">{company.logo}</span>
-              <span className="font-medium text-sm">{company.name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Stats */}
       <div className="mx-auto max-w-2xl lg:max-w-none">
@@ -65,7 +28,7 @@ const StatsSection = () => (
             Des chiffres qui parlent d'eux-mêmes
           </h2>
           <p className="mt-4 text-lg text-gray-600">
-            Découvrez pourquoi Company Lens est la référence en Belgique pour l'analyse d'entreprises
+            Découvrez pourquoi Company Lens sera la référence en Belgique pour l'analyse d'entreprises
           </p>
         </div>
 
@@ -115,7 +78,7 @@ const StatsSection = () => (
             </div>
             <h3 className="mt-4 text-lg font-semibold text-gray-900">Conformité RGPD</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Toutes vos données sont protégées selon les normes européennes les plus strictes
+              Toutes vos données sont protégées selon les normes européennes
             </p>
           </div>
 
@@ -128,18 +91,6 @@ const StatsSection = () => (
             <h3 className="mt-4 text-lg font-semibold text-gray-900">Mise à jour en temps réel</h3>
             <p className="mt-2 text-sm text-gray-600">
               Nos données sont actualisées quotidiennement depuis les sources officielles
-            </p>
-          </div>
-
-          <div className="text-center">
-            <div className="flex justify-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
-                <Icons.support className="h-8 w-8 text-purple-600" />
-              </div>
-            </div>
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">Support expert</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              Notre équipe d'experts est disponible 24/7 pour vous accompagner
             </p>
           </div>
         </div>
