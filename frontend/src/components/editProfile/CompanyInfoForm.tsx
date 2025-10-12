@@ -139,7 +139,7 @@ const CompanyInfoForm: React.FC<CompanyInfoFormProps> = ({
             <p className="mt-1 text-sm text-red-600">{errors.vatNumber}</p>
           )}
           <p className="mt-1 text-xs text-gray-500">
-            Format: BE suivi de 10 chiffres
+            Format: BE suivi de 10 chiffres (ex: BE0123456789 ou 0123456789)
           </p>
         </div>
       </div>

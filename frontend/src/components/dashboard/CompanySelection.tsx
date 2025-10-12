@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Building2, Search, AlertCircle, CheckCircle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { companyApi } from '../../services/api';
 import { config } from '../../config/environment';
+import { authApi } from '../../services/api';
 
 interface CompanySelectionProps {
   onCompanySelected?: () => void;
@@ -12,40 +13,49 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
   const [vatNumber, setVatNumber] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isScrapingPending, setIsScrapingPending] = useState(false);
   const queryClient = useQueryClient();
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingAttemptsRef = useRef(0);
+  const MAX_POLLING_ATTEMPTS = 60; // 60 attempts * 3 seconds = 3 minutes max
 
   const associateCompanyMutation = useMutation({
     mutationFn: async (vat: string) => {
-      // First, verify the company exists using the search API
-      const companies = await companyApi.search({ vatNumber: vat });
-      if (!companies || companies.length === 0) {
-        throw new Error('Aucune entreprise trouvée avec ce numéro de TVA');
-      }
-      
-      const company = companies[0];
-      
-      // Associate the company with the user using fetch directly
+      // Use the new endpoint that handles both existing companies and scraping
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`${config.API_BASE_URL}/api/auth/user/profile/`, {
-        method: 'PATCH',
+      const response = await fetch(`${config.API_BASE_URL}/api/users/profile/company/`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ companyId: company.id })
+        body: JSON.stringify({ company_vat: vat })
       });
-      
+
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to associate company');
+        throw new Error(data.message || 'Échec de l\'association de l\'entreprise');
       }
-      
-      return response.json();
+
+      // Handle two cases:
+      // 1. Company exists (200): data.status === 'success'
+      // 2. Company doesn't exist, scraping launched (202): data.status === 'pending'
+      return data;
     },
     onSuccess: async (data) => {
+      if (data.status === 'pending') {
+        // Company doesn't exist, scraping launched
+        setError('');
+        setSuccess(false);
+        setIsScrapingPending(true);
+        return;
+      }
+
+      // Company exists and was associated successfully
       setSuccess(true);
       setError('');
-      // Update user data in cache and invalidate all user queries
-      queryClient.setQueryData(['user', 'current'], data);
+      setIsScrapingPending(false);
 
       // Invalidate all relevant queries to force refresh
       await Promise.all([
@@ -56,11 +66,6 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
 
       // Force refetch the user data immediately to update auth context
       await queryClient.refetchQueries({ queryKey: ['auth', 'user'] });
-
-      // Force refetch the company data if the user has a company
-      if (data.companyId) {
-        await queryClient.refetchQueries({ queryKey: ['companies', 'detail', data.companyId] });
-      }
 
       // Call callback after a short delay to show success message
       setTimeout(() => {
@@ -77,23 +82,95 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate VAT number format
     if (!vatNumber.trim()) {
       setError('Veuillez entrer un numéro de TVA');
       return;
     }
-    
-    // Belgian VAT format: BE + 10 digits
-    const vatRegex = /^BE\d{10}$/;
-    if (!vatRegex.test(vatNumber.replace(/\s/g, '').toUpperCase())) {
+
+    // Belgian VAT format: BE0123456789 or 0123456789 (with optional spaces/dots)
+    const cleanVat = vatNumber.replace(/[\s.]/g, '').toUpperCase();
+    const vatRegex = /^(BE)?\d{10}$/;
+    if (!vatRegex.test(cleanVat)) {
       setError('Format invalide. Le numéro de TVA belge doit être au format BE0123456789');
       return;
     }
-    
-    const formattedVat = vatNumber.replace(/\s/g, '').toUpperCase();
-    associateCompanyMutation.mutate(formattedVat);
+
+    // Send the cleaned VAT (backend will normalize it)
+    associateCompanyMutation.mutate(cleanVat);
   };
+
+  // Polling effect: Check if user has been updated with company_id after scraping
+  useEffect(() => {
+    if (!isScrapingPending) return;
+
+    const checkUserStatus = async () => {
+      try {
+        pollingAttemptsRef.current += 1;
+
+        // Check if we've exceeded max attempts (3 minutes)
+        if (pollingAttemptsRef.current > MAX_POLLING_ATTEMPTS) {
+          setIsScrapingPending(false);
+          setError('Le scraping a pris trop de temps. Veuillez rafraîchir la page ou réessayer plus tard.');
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          return;
+        }
+
+        // Fetch fresh user data
+        const userData = await authApi.getCurrentUser();
+
+        // Check if user now has a company_id (not a VAT placeholder)
+        if (userData.companyId && !userData.companyId.startsWith('BE')) {
+          // User has been updated with actual company ID!
+          setIsScrapingPending(false);
+          setSuccess(true);
+          setError('');
+
+          // Clear polling interval
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+
+          // Invalidate queries to refresh data
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['user'] }),
+            queryClient.invalidateQueries({ queryKey: ['companies'] }),
+            queryClient.invalidateQueries({ queryKey: ['auth'] }),
+          ]);
+
+          // Refetch user data
+          await queryClient.refetchQueries({ queryKey: ['auth', 'user'] });
+
+          // Call callback after a short delay
+          setTimeout(() => {
+            if (onCompanySelected) {
+              onCompanySelected();
+            }
+          }, 1500);
+        }
+      } catch (err) {
+        console.error('Error checking user status:', err);
+        // Continue polling even on errors (might be temporary network issue)
+      }
+    };
+
+    // Start polling every 3 seconds
+    pollingAttemptsRef.current = 0;
+    pollingIntervalRef.current = setInterval(checkUserStatus, 2000);
+
+    // Cleanup on unmount or when scraping stops
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [isScrapingPending, queryClient, onCompanySelected, MAX_POLLING_ATTEMPTS]);
 
   return (
     <div className="min-h-[400px] flex items-center justify-center p-8">
@@ -133,11 +210,26 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
               <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
             </div>
             <p className="mt-1 text-xs text-gray-500">
-              Format: BE suivi de 10 chiffres (ex: BE0123456789)
+              Format: BE suivi de 10 chiffres (ex: BE0123456789 ou 0123456789)
             </p>
           </div>
 
-          {error && (
+          {/* Scraping in progress state (similar to SearchResults) */}
+          {isScrapingPending && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 flex flex-col items-center">
+              <svg className="animate-spin h-8 w-8 text-blue-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <p className="text-sm text-blue-900 font-medium mb-2">
+                Recherche en cours via notre IA...
+              </p>
+              <p className="text-xs text-blue-700 text-center max-w-md">
+                Cette entreprise n'est pas encore dans notre base. Nous la recherchons pour vous. Cela peut prendre quelques minutes.
+              </p>
+            </div>
+          )}
+
+          {error && !isScrapingPending && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start">
               <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
               <p className="text-sm text-red-800">{error}</p>
@@ -155,7 +247,7 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
 
           <button
             type="submit"
-            disabled={associateCompanyMutation.isPending || success}
+            disabled={associateCompanyMutation.isPending || success || isScrapingPending}
             className="w-full py-2 px-4 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {associateCompanyMutation.isPending ? (
@@ -168,6 +260,8 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
               </span>
             ) : success ? (
               'Redirection...'
+            ) : isScrapingPending ? (
+              'Scraping en cours...'
             ) : (
               'Associer mon entreprise'
             )}

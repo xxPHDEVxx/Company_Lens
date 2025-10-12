@@ -293,6 +293,25 @@ def process_scraped_data(scraper_result: Dict[str, Any], vat_number: str) -> Dic
             'timestamp': timezone.now().isoformat()
         }, timeout=300)
 
+        # Update the user who requested this scraping (if any)
+        # Check cache for user_id stored during the initial request
+        user_cache_key = f"scraping_user:{clean_vat}"
+        user_id = cache.get(user_cache_key)
+
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)
+                user.company_id = company.id
+                user.save()
+                logger.info(
+                    f"Updated user {user.email} (ID: {user_id}) with company_id {company.id} "
+                    f"after successful scraping of VAT {clean_vat}"
+                )
+                # Clean up cache
+                cache.delete(user_cache_key)
+            except User.DoesNotExist:
+                logger.warning(f"User {user_id} not found when trying to update company_id")
+
         logger.info(f"Successfully processed and saved company data for VAT: {clean_vat}")
         return result_data
 
@@ -366,6 +385,12 @@ def fetch_company_data_async(vat_number: str, user_id: Optional[int] = None) -> 
         logger.info(f"Launching AI scraper task for VAT: {clean_vat}")
 
         from celery import current_app
+
+        # Store user_id in cache if provided, so we can update the user after scraping
+        if user_id:
+            cache_key = f"scraping_user:{vat_number}"
+            cache.set(cache_key, user_id, timeout=3600)  # 1 hour timeout
+            logger.info(f"Stored user_id {user_id} in cache for VAT: {vat_number}")
 
         # Send AI scraper task (it will manually trigger the callback when done)
         result = current_app.send_task(

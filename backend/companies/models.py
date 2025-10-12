@@ -170,9 +170,9 @@ class Company(models.Model):
     )
     
     # Contact information
-    website = models.URLField(_('website'), blank=True)
-    phone = models.CharField(_('phone'), max_length=20, blank=True)
-    email = models.EmailField(_('email'), blank=True)
+    website = models.URLField(_('website'), blank=True, null=True)
+    phone = models.CharField(_('phone'), max_length=20, blank=True, null=True)
+    email = models.EmailField(_('email'), blank=True, null=True)
     
     # Tracking
     created_at = models.DateTimeField(_('created at'), auto_now_add=True)

@@ -135,16 +135,16 @@ def create_demo_user():
     user, created = User.objects.get_or_create(
         email=email,
         defaults={
-            'username': email.split('@')[0],
-            'first_name': 'Demo',
-            'last_name': 'User',
+            'name': 'Demo User',
             'is_active': True,
+            'is_staff': True,
+            'is_superuser': True,
         }
     )
     if created:
         user.set_password('demo123')
         user.save()
-        print(f"✅ Created demo user: {email}")
+        print(f"✅ Created demo superuser: {email}")
     else:
         user.set_password('demo123')
         user.save()
