@@ -1,12 +1,7 @@
 # AI Scraper Worker Dockerfile
-FROM python:3.11-slim
+FROM python:3.11
 
 WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
 RUN pip install poetry==1.8.2
