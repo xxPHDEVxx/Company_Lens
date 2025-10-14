@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from companies.utils import normalize_vat, validate_vat
 
 User = get_user_model()
 
@@ -29,22 +30,19 @@ class AssociateCompanySerializer(serializers.Serializer):
     )
 
     def validate_company_vat(self, value):
-        """Normalize and validate VAT number."""
-        # Remove spaces and dots
-        vat = value.upper().replace(' ', '').replace('.', '')
+        """
+        Normalize and validate VAT number.
 
-        # Add BE prefix if missing
-        if not vat.startswith('BE'):
-            vat = 'BE' + vat.lstrip('0')
+        Uses centralized VAT utility for consistent normalization across the app.
+        """
+        try:
+            normalized_vat = normalize_vat(value)
 
-        # Ensure BE + 10 digits format
-        if vat.startswith('BE') and len(vat) < 12:
-            vat = 'BE' + vat[2:].zfill(10)
+            # Double-check the normalized value is valid
+            if not validate_vat(normalized_vat):
+                raise ValueError("Normalization produced invalid VAT")
 
-        # Validate format
-        if not vat.startswith('BE') or len(vat) != 12:
-            raise serializers.ValidationError(
-                'Invalid VAT format. Expected BE + 10 digits (e.g., BE0123456789)'
-            )
+            return normalized_vat
 
-        return vat
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
