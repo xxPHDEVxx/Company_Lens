@@ -32,7 +32,7 @@ const StatsSection = () => (
           </p>
         </div>
 
-        <dl className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="grid grid-cols-1 gap-8 sm:grid-cols-2 justify-items-center max-w-4xl mx-auto">
           {stats.map((stat) => (
             <div key={stat.id} className="group relative">
               <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white to-gray-50 p-8 shadow-lg ring-1 ring-gray-200 hover:shadow-xl hover:ring-blue-300 transition-all duration-300">
@@ -69,7 +69,7 @@ const StatsSection = () => (
         </dl>
 
         {/* Additional trust elements */}
-        <div className="mt-20 grid grid-cols-1 gap-8 sm:grid-cols-3">
+        <div className="mt-20 grid grid-cols-1 gap-8 sm:grid-cols-2 max-w-3xl mx-auto">
           <div className="text-center">
             <div className="flex justify-center">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">

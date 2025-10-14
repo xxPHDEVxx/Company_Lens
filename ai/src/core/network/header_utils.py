@@ -4,8 +4,6 @@ Module Name: core.web_client.header_utils
 Description: This module contains helper for http
              client.
 
-Author: Jeremy Trips
-Date: 2025-02-24
 """
 
 
