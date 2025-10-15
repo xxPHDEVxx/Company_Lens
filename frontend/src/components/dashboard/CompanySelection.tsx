@@ -11,13 +11,14 @@ interface CompanySelectionProps {
 
 const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
   const [vatNumber, setVatNumber] = useState('');
+  const [cleanedVat, setCleanedVat] = useState(''); // Store cleaned VAT for polling
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isScrapingPending, setIsScrapingPending] = useState(false);
   const queryClient = useQueryClient();
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollingAttemptsRef = useRef(0);
-  const MAX_POLLING_ATTEMPTS = 60; // 60 attempts * 3 seconds = 3 minutes max
+  const MAX_POLLING_ATTEMPTS = 60; // 60 attempts * 2 seconds = 2 minutes max
 
   const associateCompanyMutation = useMutation({
     mutationFn: async (vat: string) => {
@@ -57,6 +58,10 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
       setError('');
       setIsScrapingPending(false);
 
+      // Fetch fresh user data and update cache immediately
+      const freshUserData = await authApi.getCurrentUser();
+      queryClient.setQueryData(['auth', 'user'], freshUserData);
+
       // Invalidate all relevant queries to force refresh
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['user'] }),
@@ -64,7 +69,7 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
         queryClient.invalidateQueries({ queryKey: ['auth'] }),
       ]);
 
-      // Force refetch the user data immediately to update auth context
+      // Refetch to ensure consistency
       await queryClient.refetchQueries({ queryKey: ['auth', 'user'] });
 
       // Call callback after a short delay to show success message
@@ -97,15 +102,18 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
       return;
     }
 
+    // Store cleaned VAT for polling
+    setCleanedVat(cleanVat);
+
     // Send the cleaned VAT (backend will normalize it)
     associateCompanyMutation.mutate(cleanVat);
   };
 
-  // Polling effect: Check if user has been updated with company_id after scraping
+  // Polling effect: Check scraping status and user updates
   useEffect(() => {
     if (!isScrapingPending) return;
 
-    const checkUserStatus = async () => {
+    const checkScrapingStatus = async () => {
       try {
         pollingAttemptsRef.current += 1;
 
@@ -120,48 +128,90 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
           return;
         }
 
-        // Fetch fresh user data
-        const userData = await authApi.getCurrentUser();
+        // Check fetch status endpoint to detect failures
+        const token = localStorage.getItem('authToken');
+        const statusResponse = await fetch(
+          `${config.API_BASE_URL}/api/companies/fetch_status/?vat=${cleanedVat}`,
+          {
+            headers: {
+              ...(token && { Authorization: `Bearer ${token}` }),
+            },
+          }
+        );
 
-        // Check if user now has a company_id (not a VAT placeholder)
-        if (userData.companyId && !userData.companyId.startsWith('BE')) {
-          // User has been updated with actual company ID!
-          setIsScrapingPending(false);
-          setSuccess(true);
-          setError('');
+        // Handle response
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
 
-          // Clear polling interval
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
+          // Check if scraping failed
+          if (statusData.status === 'failed') {
+            setIsScrapingPending(false);
+            setSuccess(false);
+            setError('Entreprise non trouvée. Vérifiez le numéro de TVA ou réessayez plus tard.');
+
+            // Clear polling interval
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
+            }
+            return;
           }
 
-          // Invalidate queries to refresh data
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: ['user'] }),
-            queryClient.invalidateQueries({ queryKey: ['companies'] }),
-            queryClient.invalidateQueries({ queryKey: ['auth'] }),
-          ]);
+          // Check if scraping completed
+          if (statusData.status === 'completed') {
+            // Scraping is done! Stop polling immediately
+            setIsScrapingPending(false);
+            setSuccess(true);
+            setError('');
 
-          // Refetch user data
-          await queryClient.refetchQueries({ queryKey: ['auth', 'user'] });
-
-          // Call callback after a short delay
-          setTimeout(() => {
-            if (onCompanySelected) {
-              onCompanySelected();
+            // Clear polling interval
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
             }
-          }, 1500);
+
+            // Fetch fresh user data to get updated company_id
+            const userData = await authApi.getCurrentUser();
+
+            // Update cache with fresh user data immediately
+            queryClient.setQueryData(['auth', 'user'], userData);
+
+            // Invalidate queries to refresh all related data
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['user'] }),
+              queryClient.invalidateQueries({ queryKey: ['companies'] }),
+              queryClient.invalidateQueries({ queryKey: ['auth'] }),
+            ]);
+
+            // Refetch to ensure consistency
+            await queryClient.refetchQueries({ queryKey: ['auth', 'user'] });
+
+            // Call callback after a short delay
+            setTimeout(() => {
+              if (onCompanySelected) {
+                onCompanySelected();
+              }
+            }, 1500);
+            return;
+          }
+        } else if (statusResponse.status === 404) {
+          // 404 with "unknown" status means scraping hasn't been cached yet
+          // This is normal during the first few polling attempts
+          // Just continue polling
+          console.log('Fetch status not yet available, continuing polling...');
+        } else {
+          // Other errors - log but continue polling
+          console.error('Fetch status error:', statusResponse.status);
         }
       } catch (err) {
-        console.error('Error checking user status:', err);
+        console.error('Error checking scraping status:', err);
         // Continue polling even on errors (might be temporary network issue)
       }
     };
 
-    // Start polling every 3 seconds
+    // Start polling every 2 seconds
     pollingAttemptsRef.current = 0;
-    pollingIntervalRef.current = setInterval(checkUserStatus, 2000);
+    pollingIntervalRef.current = setInterval(checkScrapingStatus, 2000);
 
     // Cleanup on unmount or when scraping stops
     return () => {
@@ -170,7 +220,7 @@ const CompanySelection = ({ onCompanySelected }: CompanySelectionProps) => {
         pollingIntervalRef.current = null;
       }
     };
-  }, [isScrapingPending, queryClient, onCompanySelected, MAX_POLLING_ATTEMPTS]);
+  }, [isScrapingPending, cleanedVat, queryClient, onCompanySelected, MAX_POLLING_ATTEMPTS]);
 
   return (
     <div className="min-h-[400px] flex items-center justify-center p-8">

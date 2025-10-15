@@ -1,18 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
 import MainContentLayout from '../components/layout/MainContentLayout';
 import WelcomeSection from '../components/dashboard/WelcomeSection';
 import CompanyInfo from '../components/dashboard/CompanyInfo';
 import CompanySelection from '../components/dashboard/CompanySelection';
-import { authApi } from '../services/api';
-import type { User } from '../types/api';
+import { useCurrentUser } from '../hooks/queries/useAuth';
 
 const Dashboard = () => {
-  // Fetch current user data
-  const { data: user, isLoading, refetch } = useQuery<User>({
-    queryKey: ['user', 'current'],
-    queryFn: () => authApi.getCurrentUser(),
-    staleTime: 0, // Ensure fresh data
-  });
+  // Fetch current user data using the centralized hook
+  const { data: user, isLoading, refetch } = useCurrentUser();
 
   if (isLoading) {
     return (
