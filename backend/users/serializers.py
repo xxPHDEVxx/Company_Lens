@@ -10,14 +10,31 @@ User = get_user_model()
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile data."""
 
+    # Add company name from the associated company
+    company_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'name', 'company_id', 'phone',
+            'id', 'email', 'name', 'company_id', 'company_name', 'phone',
             'avatar', 'bio', 'language', 'email_notifications',
             'is_company_user', 'date_joined'
         ]
-        read_only_fields = ['id', 'email', 'company_id', 'is_company_user', 'date_joined']
+        read_only_fields = ['id', 'email', 'company_id', 'company_name', 'is_company_user', 'date_joined']
+
+    def get_company_name(self, obj):
+        """Get the company name from the company_id."""
+        if not obj.company_id:
+            return None
+
+        # Import here to avoid circular imports
+        from companies.models import Company
+
+        try:
+            company = Company.objects.get(vat=obj.company_id)
+            return company.name
+        except Company.DoesNotExist:
+            return None
 
 
 class AssociateCompanySerializer(serializers.Serializer):

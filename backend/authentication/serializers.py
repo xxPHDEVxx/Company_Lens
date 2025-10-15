@@ -12,23 +12,40 @@ User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model."""
-    
+
     # Map company_id to companyId for frontend compatibility
     companyId = serializers.CharField(source='company_id', required=False, allow_null=True, allow_blank=True)
-    
+
+    # Add company name from the associated company
+    company_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'name', 'companyId', 'phone',
+            'id', 'email', 'name', 'companyId', 'company_name', 'phone',
             'avatar', 'bio', 'language', 'email_notifications',
             'date_joined', 'last_login', 'is_active'
         ]
-        read_only_fields = ['id', 'date_joined', 'last_login']
+        read_only_fields = ['id', 'date_joined', 'last_login', 'company_name']
         extra_kwargs = {
             'avatar': {'required': False, 'allow_null': True},
             'bio': {'required': False, 'allow_blank': True},
             'phone': {'required': False, 'allow_blank': True},
         }
+
+    def get_company_name(self, obj):
+        """Get the company name from the company_id."""
+        if not obj.company_id:
+            return None
+
+        # Import here to avoid circular imports
+        from companies.models import Company
+
+        try:
+            company = Company.objects.get(vat=obj.company_id)
+            return company.name
+        except Company.DoesNotExist:
+            return None
 
 
 class LoginSerializer(serializers.Serializer):
