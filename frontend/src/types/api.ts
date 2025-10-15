@@ -116,6 +116,9 @@ export interface User {
   email: string;
   name: string;
   companyId?: string;
+  company_name?: string;
+  phone?: string;
+  date_joined?: string;
 }
 
 export interface AuthResponse {
