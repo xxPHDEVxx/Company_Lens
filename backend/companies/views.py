@@ -132,7 +132,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
             # Pad with zeros if needed (Belgian VAT should be BE + 10 digits)
             if clean_vat.startswith('BE') and len(clean_vat) < 12:
                 clean_vat = 'BE' + clean_vat[2:].zfill(10)
-            
+
             queryset = queryset.filter(vat__icontains=clean_vat)
             search_type = 'vat'  # Set search type for ordering logic
             vat_search = True
@@ -149,7 +149,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
                         clean_vat = 'BE' + clean_vat.lstrip('0')
                     if clean_vat.startswith('BE') and len(clean_vat) < 12:
                         clean_vat = 'BE' + clean_vat[2:].zfill(10)
-                    
+
                     queryset = queryset.filter(vat__icontains=clean_vat)
                     vat_search = True
                 elif search_type == 'name':
@@ -295,7 +295,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
                 clean_vat = 'BE' + clean_vat.lstrip('0')
             if clean_vat.startswith('BE') and len(clean_vat) < 12:
                 clean_vat = 'BE' + clean_vat[2:].zfill(10)
-            
+
             # Check if company now exists
             try:
                 company = Company.objects.get(vat=clean_vat)

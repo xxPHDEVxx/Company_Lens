@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from .models import (
-    Company, Address, Activity, Establishment, 
+    Company, Address, Activity, Establishment,
     FinancialData, CompanyFollower
 )
 from .serializers import CompanyDetailSerializer
