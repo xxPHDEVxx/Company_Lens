@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import MainContentLayout from '../components/layout/MainContentLayout';
 import { SearchForm, SearchResults, RecentSearches } from '../components/recherche';
 import { useCompanySearch, useAddRecentSearch } from '../hooks/queries';
+import { validateAndNormalizeVat } from '../utils/vatValidation';
 
 interface SearchFilters {
   vatNumber: string;
@@ -19,6 +20,7 @@ const RechercheContent = () => {
   });
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [vatError, setVatError] = useState<string>('');
 
   // Use React Query hooks
   const {
@@ -35,14 +37,25 @@ const RechercheContent = () => {
   const handleFilterChange = (key: keyof SearchFilters, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setSearchEnabled(false); // Disable auto-search when filters change
+
+    // Clear VAT error when user changes the VAT number
+    if (key === 'vatNumber') {
+      setVatError('');
+    }
   };
 
   const handleSearch = () => {
-    if (!filters.vatNumber.trim()) {
-      alert('Veuillez entrer un numéro de TVA');
+    // Validate VAT number
+    const validation = validateAndNormalizeVat(filters.vatNumber);
+
+    if (!validation.isValid) {
+      setVatError(validation.error || 'Format de TVA invalide');
       return;
     }
 
+    // Clear error and use normalized VAT for search
+    setVatError('');
+    setFilters(prev => ({ ...prev, vatNumber: validation.normalized || prev.vatNumber }));
     setHasSearched(true);
     setSearchEnabled(true); // Enable the query
   };
@@ -92,6 +105,7 @@ const RechercheContent = () => {
         onFilterChange={handleFilterChange}
         onSearch={handleSearch}
         isSearching={isSearching}
+        vatError={vatError}
       />
 
       {/* Search Results */}
