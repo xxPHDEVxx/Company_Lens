@@ -419,4 +419,18 @@ export const authApi = {
     const data = await response.json();
     return transformResponse(data);
   },
+
+  updateProfile: async (userData: Partial<User>): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/users/profile/`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(transformRequest(userData)),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update profile');
+    }
+    const data = await response.json();
+    return transformResponse(data);
+  },
 };
