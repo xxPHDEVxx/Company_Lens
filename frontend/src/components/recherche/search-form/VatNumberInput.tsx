@@ -28,7 +28,7 @@ const VatNumberInput: React.FC<VatNumberInputProps> = ({
       <label htmlFor="vatNumber" className="block text-sm font-medium text-gray-700 mb-2">
         Numéro de TVA *
       </label>
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-start">
         <div className="flex-1">
           <div className="relative">
             <input
@@ -63,9 +63,6 @@ const VatNumberInput: React.FC<VatNumberInputProps> = ({
               {error}
             </p>
           )}
-          <p className="mt-1 text-xs text-gray-500">
-            Format: BE suivi de 10 chiffres (ex: BE0123456789 ou 0123456789)
-          </p>
         </div>
         <SearchButton
           onClick={onSearch}
