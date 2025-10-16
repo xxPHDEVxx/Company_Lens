@@ -157,7 +157,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S.%fZ',
+    'DATETIME_FORMAT': 'iso-8601',  # Proper ISO format with timezone offset
     'DATE_FORMAT': '%Y-%m-%d',
 }
 
