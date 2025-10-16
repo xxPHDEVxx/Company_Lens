@@ -95,14 +95,6 @@ const RecentSearches = () => {
             </div>
           ))}
         </div>
-
-        {recentSearches.length > 5 && (
-          <div className="mt-4 sm:mt-6 text-center">
-            <button className="text-xs sm:text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
-              Voir tout l'historique ({recentSearches.length} recherches) →
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
