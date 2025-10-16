@@ -142,9 +142,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'company_lens.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 200,
-    'MAX_PAGE_SIZE': 10000,  # Allow up to 10000 items per page when requested
+    'MAX_PAGE_SIZE': 500,  # Maximum allowed items per page
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
