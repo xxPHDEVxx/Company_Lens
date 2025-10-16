@@ -25,7 +25,7 @@ const getAuthHeaders = (): HeadersInit => {
 // Company APIs
 export const companyApi = {
   getAll: async (): Promise<Company[]> => {
-    const response = await fetch(`${API_BASE_URL}/companies/`, {
+    const response = await fetch(`${API_BASE_URL}/companies/?page_size=1000`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch companies');
