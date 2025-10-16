@@ -92,7 +92,6 @@ def parse_french_date(date_str: Optional[str]) -> Optional[str]:
     return None
 
 
-# Until better integration this function will ensure the data are correctly adapted to the backend model
 @transaction.atomic
 def save_company_from_scraper_data(data: Dict[str, Any], vat_number: str) -> Company:
     """
@@ -415,5 +414,49 @@ def fetch_company_data_async(vat_number: str, user_id: Optional[int] = None) -> 
             'error': str(e),
             'vat_number': vat_number
         }
+
+
+@shared_task(name='companies.tasks.weekly_update_all_companies')
+def weekly_update_all_companies() -> Dict[str, Any]:
+    """
+    Weekly task to update all companies in database by re-scraping their data.
+    Runs every Sunday at midnight (configured in CELERY_BEAT_SCHEDULE).
+
+    Returns:
+        Dict with summary of update results
+    """
+    logger.info(f"Starting weekly update of all companies at {timezone.now()}")
+
+    # Get all companies
+    companies = Company.objects.all()
+    total_companies = companies.count()
+
+    queued_count = 0
+    failed_count = 0
+    failed_vats = []
+
+    for company in companies:
+        try:
+            # Trigger scraping task for this company
+            # This will update the company data with fresh scraped information
+            fetch_company_data_async.delay(company.vat)
+            queued_count += 1
+            logger.info(f"Queued update for company: {company.name} ({company.vat})")
+        except Exception as e:
+            failed_count += 1
+            failed_vats.append(company.vat)
+            logger.error(f"Failed to queue update for company {company.vat}: {e}")
+
+    result = {
+        'status': 'success',
+        'total_companies': total_companies,
+        'queued_for_update': queued_count,
+        'failed': failed_count,
+        'failed_vats': failed_vats,
+        'timestamp': timezone.now().isoformat()
+    }
+
+    logger.info(f"Weekly update completed: {result}")
+    return result
 
 

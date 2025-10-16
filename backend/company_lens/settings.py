@@ -10,6 +10,7 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config, Csv
 import dj_database_url
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -341,3 +342,14 @@ AI_SCRAPER_TIMEOUT = config('AI_SCRAPER_TIMEOUT', default=120, cast=int)  # 2 mi
 COMPANY_FETCH_RETRY_DELAY = 300  # 5 minutes between retries
 COMPANY_FETCH_MAX_RETRIES = 3
 COMPANY_DATA_CACHE_TTL = 86400  # 24 hours
+
+# Celery Beat periodic tasks configuration
+CELERY_BEAT_SCHEDULE = {
+    'weekly-update-all-companies': {
+        'task': 'companies.tasks.weekly_update_all_companies',
+        'schedule': crontab(hour=0, minute=0, day_of_week=0),  # Sunday at midnight
+        'options': {
+            'expires': 3600,  # Task expires after 1 hour if not picked up
+        }
+    },
+}
