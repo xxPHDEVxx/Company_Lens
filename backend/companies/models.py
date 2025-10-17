@@ -388,7 +388,23 @@ class FinancialData(models.Model):
         null=True,
         help_text=_('Profit margin as percentage')
     )
-    
+    total_assets = models.DecimalField(
+        _('total assets'),
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text=_('Total balance sheet assets')
+    )
+    gross_margin = models.DecimalField(
+        _('gross margin'),
+        max_digits=15,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text=_('Gross margin in EUR')
+    )
+
     # Other metrics
     employees = models.IntegerField(_('number of employees'), blank=True, null=True)
     
