@@ -8,8 +8,6 @@ from src.features.company_scraper.runnable.company_description import (
 from src.features.company_scraper.schema.company_schema import CompanySchema
 
 
-
-
 @traceable
 def run(fields: ScrapeCompanyDto) -> CompanySchema:
     """

@@ -1,3 +1,7 @@
+"""
+    old website extractor unused for now because of url identifier accurency rate (<85%)
+"""
+
 from src.features.company_scraper.tools.utils import *
 from googlesearch import search
 from src.features.company_scraper.tools.scraper import CompanyScraper
