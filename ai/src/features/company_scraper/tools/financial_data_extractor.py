@@ -18,7 +18,7 @@ from src.features.company_scraper.config.belgian_annual_account_models import (
     Annual_account_model,
 )
 from src.features.company_scraper.config.urls import URL
-from src.features.company_scraper.schema.company_schema import CompanySizeEnum
+from src.features.company_scraper.schema.company_schema import CompanySizeEnum, FinancialSchema
 from src.features.company_scraper.schema.data_process import AnnualAccountData
 from src.features.company_scraper.schema.nbb_response_model import (
     NbbDepositModel,
@@ -312,6 +312,10 @@ class XbrlFileManager:
             ),  # Replace with correct tag for revenue if needed
             "10/49": self.get_text("pfs:Assets", context="PrecedingInstant"),
             "9900": self.get_text("pfs:GrossOperatingMargin", context="PrecedingDuration"),
+            "9903": self.get_text("pfs:ProfitLoss", context="PrecedingDuration"),  # Benefice
+            "9904": None,  # TODO: Add XBRL tag for code 9904 if needed
+            "9905": None,  # TODO: Add XBRL tag for code 9905 if needed
+            "9906": None,  # TODO: Add XBRL tag for code 9906 if needed
             "74": None,  # Add extraction if needed
             "60": None,  # Add extraction if needed
             "61": None,  # Add extraction if needed
@@ -355,86 +359,137 @@ class FinancialDataExtractor:
             return None
         return NbbDepositApiResponseModel(**json.loads(binaries))
 
-    def __get_last_year_deposits(
-        self, nbb_response: NbbDepositApiResponseModel
+    def __get_last_n_deposits(
+        self, nbb_response: NbbDepositApiResponseModel, n: int = 3
     ) -> Optional[list[NbbDepositModel]]:
         """
-        Retrieves deposits from the previous year from the given published deposits data.
+        Retrieves the last N deposits (most recent years) from the published deposits data.
 
-        :return: A list of dictionaries containing deposits from the last year, or an empty list if no deposits found.
+        :param nbb_response: NBB API response containing all deposits
+        :param n: Number of most recent deposits to retrieve (default: 3)
+        :return: A list of the N most recent deposits, or None if no deposits found
         """
         if nbb_response.content and len(nbb_response.content) > 0:
-            last_deposit = nbb_response.content[0]  # first deposit
-            last_year = last_deposit.periodEndDate.year
-
-            # Filter deposits
-            last_year_deposits = [
-                deposit
-                for deposit in nbb_response.content
-                if deposit.periodEndDate.year == last_year
-            ]
-            return last_year_deposits
+            # Deposits are already sorted by date (most recent first)
+            return nbb_response.content[:n]
+        return None
 
     def __extract_financial_from_deposit(
-        self, last_year_deposits: list[NbbDepositModel]
+        self, deposit: NbbDepositModel
     ) -> dict:
         """
-        Retrieves data from the last year deposit of the published deposits from the NBB.
-        Args:
-            last_year_deposits (List[NbbDepositModel]): _description_
+        Extracts financial data from a single deposit file.
 
-        Returns:
-            dict: _description_
+        :param deposit: Single NBB deposit model
+        :return: Dictionary containing parsed financial codes and values
         """
-        for deposit in last_year_deposits:
-            if deposit.importFileType == "PDF":
-                continue
-            data = self.__nbb_file_manager.handle_file(
-                file_type=deposit.importFileType, deposit_id=deposit.id
-            )
-            return data
-        if len(last_year_deposits) > 0:
-            return self.__nbb_file_manager.handle_file(
-                file_type=last_year_deposits[0].importFileType,
-                deposit_id=last_year_deposits[0].id,
-            )
-        return {}
+        return self.__nbb_file_manager.handle_file(
+            file_type=deposit.importFileType,
+            deposit_id=deposit.id
+        )
 
-    def extract(self) -> Optional[AnnualAccountData]:
+    def extract(self) -> list[FinancialSchema]:
         """
-        Test the FinancialDataManager class.
+        Extract financial data for the last 3 years from NBB deposits.
+
+        :return: List of FinancialSchema objects (one per year), or empty list if no data found
         """
         nbb_response = self.__get_company_deposits()
-        last_year_deposits = self.__get_last_year_deposits(nbb_response)
-        if last_year_deposits is None:
-            logger.info("get_last_year_deposits : Annual account data not found")
-            return None
-        last_year_financial_data = self.__extract_financial_from_deposit(
-            last_year_deposits
-        )
+        last_n_deposits = self.__get_last_n_deposits(nbb_response, n=3)
 
-        return AnnualAccountData(
-            model=last_year_financial_data.get("Model code", ""),
-            employees=safe_float(
-                last_year_financial_data.get(
-                    "1003", last_year_financial_data.get("9087", 0)
+        if last_n_deposits is None:
+            logger.info("No deposits found for company")
+            return []
+
+        yearly_data = []
+
+        for deposit in last_n_deposits:
+            # Skip PDF files if other formats are available (PDFs are less reliable)
+            if deposit.importFileType == "PDF":
+                logger.info(f"Skipping PDF deposit for year {deposit.periodEndDate.year}")
+                continue
+
+            try:
+                year = deposit.periodEndDate.year
+                financial_data_dict = self.__extract_financial_from_deposit(deposit)
+
+                # Extract benefice from codes 9903, 9904, 9905, 9906 (in priority order)
+                benefice = safe_float(
+                    financial_data_dict.get("9903") or
+                    financial_data_dict.get("9904") or
+                    financial_data_dict.get("9905") or
+                    financial_data_dict.get("9906") or
+                    0
                 )
-            ),
-            previous_year_revenue=safe_float(last_year_financial_data.get("70", 0)),
-            total_asset=safe_float(last_year_financial_data.get("10/49", 0)),
-            gross_margin=safe_float(
-                last_year_financial_data.get(
-                    "9900",
-                    (
-                        (
-                            safe_float(last_year_financial_data.get("74", 0))
-                            + safe_float(last_year_financial_data.get("70", 0))
-                        )
-                        - (
-                            safe_float(last_year_financial_data.get("60", 0))
-                            + safe_float(last_year_financial_data.get("61", 0))
+
+                # Create FinancialSchema with all available fields
+                financial_schema = FinancialSchema(
+                    year=year,
+                    model=financial_data_dict.get("Model code", ""),
+                    gross_margin=safe_float(
+                        financial_data_dict.get(
+                            "9900",
+                            (
+                                (
+                                    safe_float(financial_data_dict.get("74", 0))
+                                    + safe_float(financial_data_dict.get("70", 0))
+                                )
+                                - (
+                                    safe_float(financial_data_dict.get("60", 0))
+                                    + safe_float(financial_data_dict.get("61", 0))
+                                )
+                            ),
                         )
                     ),
+                    revenue=safe_float(financial_data_dict.get("70", 0)),
+                    total_assets=safe_float(financial_data_dict.get("10/49", 0)),
+                    benefice=benefice,
+                    number_of_employees=safe_float(
+                        financial_data_dict.get("1003", financial_data_dict.get("9087", 0))
+                    )
                 )
-            ),
-        )
+
+                yearly_data.append(financial_schema)
+                logger.info(f"Extracted financial data for year {year}")
+
+            except Exception as e:
+                logger.error(f"Failed to extract financial data for year {deposit.periodEndDate.year}: {e}")
+                continue
+
+        # If all deposits were PDFs or failed, try to process at least one PDF
+        if not yearly_data and last_n_deposits:
+            for deposit in last_n_deposits:
+                if deposit.importFileType == "PDF":
+                    try:
+                        year = deposit.periodEndDate.year
+                        financial_data_dict = self.__extract_financial_from_deposit(deposit)
+
+                        # Extract benefice from codes 9903, 9904, 9905, 9906 (in priority order)
+                        benefice = safe_float(
+                            financial_data_dict.get("9903") or
+                            financial_data_dict.get("9904") or
+                            financial_data_dict.get("9905") or
+                            financial_data_dict.get("9906") or
+                            0
+                        )
+
+                        financial_schema = FinancialSchema(
+                            year=year,
+                            model=financial_data_dict.get("Model code", ""),
+                            gross_margin=safe_float(financial_data_dict.get("9900", 0)),
+                            revenue=safe_float(financial_data_dict.get("70", 0)),
+                            total_assets=safe_float(financial_data_dict.get("10/49", 0)),
+                            benefice=benefice,
+                            number_of_employees=safe_float(
+                                financial_data_dict.get("1003", financial_data_dict.get("9087", 0))
+                            )
+                        )
+
+                        yearly_data.append(financial_schema)
+                        logger.info(f"Extracted financial data from PDF for year {year}")
+                        break  # Only try first PDF
+                    except Exception as e:
+                        logger.error(f"Failed to extract PDF data for year {deposit.periodEndDate.year}: {e}")
+                        continue
+
+        return yearly_data

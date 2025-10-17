@@ -87,7 +87,12 @@ class ContactSchema(BaseModel):
 
 
 class FinancialSchema(BaseModel):
+    year: int = Field(description="Fiscal year for this financial data")
+    model: Optional[str] = Field(None, description="Annual account model (micro, abbreviated, full)")
     gross_margin: Optional[float] = Field(None, description="Gross margin of the company")
+    revenue: Optional[float] = Field(None, description="Revenue from this year")
+    total_assets: Optional[float] = Field(None, description="Total balance sheet assets")
+    benefice: Optional[float] = Field(None, description="Profit/benefit of the company (codes 9903-9906)")
     number_of_employees: Optional[float] = Field(
         None, description="Number of employees"
     )
@@ -199,8 +204,8 @@ class GeneralCompanySchema(BaseModel):
 
 class CompanySchema(GeneralCompanySchema):
     address: AddressSchema
-    finance: Optional[FinancialSchema] = Field(
-        default_factory=None, description="Financial details"
+    finance: Optional[List[FinancialSchema]] = Field(
+        default_factory=None, description="Financial data for the last 3 years"
     )
 
     establishment_units: Optional[list[EstablishmentUnit]] = Field(

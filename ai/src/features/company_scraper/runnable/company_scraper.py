@@ -89,7 +89,7 @@ if __name__ == "__main__":
         ),  # StartLAB
         ScrapeCompanyDto(
             vat_number="0435187629", website="https://www.epfc.eu"
-        ),  # StartLAB
+        ),  # EPFC
     ]
 
     # Exécuter les tests
