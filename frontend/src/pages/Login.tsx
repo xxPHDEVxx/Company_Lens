@@ -126,13 +126,6 @@ const Login = () => {
                 />
                 <span className="ml-2 text-sm text-gray-600">Se souvenir de moi</span>
               </label>
-              
-              <Link
-                to="/forgot-password"
-                className="text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200"
-              >
-                Mot de passe oublié?
-              </Link>
             </div>
             
             {errors.general && (
@@ -175,7 +168,7 @@ const Login = () => {
         
         <div className="mt-4 p-4 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-700 text-center">
-            <strong>Demo:</strong> user@example.com / password123
+            <strong>Demo:</strong> demo@example.com / demo123
           </p>
         </div>
         

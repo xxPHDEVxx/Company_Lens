@@ -95,17 +95,19 @@ class ActivitySerializer(serializers.ModelSerializer):
 
 class FinancialDataSerializer(serializers.ModelSerializer):
     """Serializer for FinancialData model."""
-    
+
     revenue_growth = serializers.SerializerMethodField()
     # Use FloatField to ensure proper JSON numeric serialization
     revenue = serializers.FloatField(required=False)
     profit = serializers.FloatField(required=False)
     margin = serializers.FloatField(required=False)
-    
+    totalAssets = serializers.FloatField(source='total_assets', required=False)
+    grossMargin = serializers.FloatField(source='gross_margin', required=False)
+
     class Meta:
         model = FinancialData
         fields = [
-            'id', 'year', 'revenue', 'profit', 'margin', 'employees',
+            'id', 'year', 'revenue', 'profit', 'margin', 'totalAssets', 'grossMargin', 'employees',
             'revenue_growth', 'extra_data', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'revenue_growth', 'created_at', 'updated_at']

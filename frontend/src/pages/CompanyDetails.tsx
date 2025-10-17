@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Download, Star } from 'lucide-react';
+import { ArrowLeft, Star } from 'lucide-react';
 import CompanyHeader from '../components/company/CompanyHeader';
 import GeneralInfo from '../components/company/GeneralInfo';
 import EstablishmentsList from '../components/company/EstablishmentsList';
@@ -204,10 +204,6 @@ const CompanyDetails = () => {
                   className="w-5 h-5"
                   fill={company?.is_followed ? 'currentColor' : 'none'}
                 />
-              </button>
-              <button className="flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-xs sm:text-sm">
-                <Download className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Exporter</span>
               </button>
             </div>
           </div>

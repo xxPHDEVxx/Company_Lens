@@ -60,7 +60,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True,
         help_text=_('VAT number or ID of the company this user is associated with')
     )
-    
+
     # User status fields
     is_active = models.BooleanField(
         _('active'),

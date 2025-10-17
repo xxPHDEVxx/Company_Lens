@@ -1,20 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Download } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft } from 'lucide-react';
 import GroupHeader from '../components/groupes/GroupHeader';
 import GroupOverview from '../components/groupes/GroupOverview';
 import GroupCompaniesView from '../components/groupes/GroupCompaniesView';
 import GroupStatistics from '../components/groupes/GroupStatistics';
 import { getGroupIcon } from '../components/groupes';
-import { useGroup, useGroupCompanies, useCompanies, useRemoveCompanyFromGroup, useAddCompaniesToGroup } from '../hooks/queries';
-import { queryKeys } from '../lib/queryClient';
+import { useGroup, useGroupCompanies, useRemoveCompanyFromGroup, useAddCompaniesToGroup } from '../hooks/queries';
 
 const GroupDetails = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Get active tab from URL or default to 'overview'
@@ -27,7 +24,7 @@ const GroupDetails = () => {
       setSearchParams({ tab: activeTab }, { replace: true });
     }
   }, [activeTab, searchParams, setSearchParams]);
-  
+
   // Determine the source page from location state or default to 'Groupes'
   const sourcePage = location.state?.from || 'Groupes';
   const sourceRoute = location.state?.route || '/groupes';
@@ -35,7 +32,6 @@ const GroupDetails = () => {
   // Use React Query hooks
   const { data: group, isLoading: groupLoading, error: groupError, refetch: refetchGroup } = useGroup(groupId);
   const { data: companies = [], isLoading: companiesLoading, refetch: refetchCompanies } = useGroupCompanies(groupId);
-  const { data: allCompanies = [] } = useCompanies();  // Fetch ALL companies for the modal
   const removeCompanyMutation = useRemoveCompanyFromGroup();
   const addCompaniesMutation = useAddCompaniesToGroup();
 
@@ -144,12 +140,6 @@ const GroupDetails = () => {
                 <span className="text-sm sm:text-base truncate">{sourcePage}</span>
               </button>
             </div>
-            <div className="flex items-center">
-              <button className="flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs sm:text-sm">
-                <Download className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Exporter</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -196,7 +186,6 @@ const GroupDetails = () => {
             <GroupCompaniesView
               group={group}
               companies={companies}
-              availableCompanies={allCompanies}
               onBack={() => navigate('/groupes')}
               onDeleteCompany={handleDeleteCompanyFromGroup}
               onAddCompanies={handleAddCompaniesToGroup}

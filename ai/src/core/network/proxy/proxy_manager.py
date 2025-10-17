@@ -3,8 +3,6 @@ Module Name: core.proxy.proxy_manager
 
 Description: This module contains the ProxyManager class, which is used to manage proxies.
 
-Author: Jeremy Trips
-Date: 2025-02-24
 """
 from abc import ABC
 import random

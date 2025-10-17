@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { X, Trash2, Plus, Building2, Eye, GripVertical } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { X, Trash2, Plus, Building2, Eye, GripVertical, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   DndContext,
@@ -21,13 +21,13 @@ import ConfirmationModal from '../common/ConfirmationModal';
 import SearchBar from '../common/SearchBar';
 import { ToastContainer } from '../common/Toast';
 import { useToast } from '../../hooks/useToast';
-import { groupApi } from '../../services/api';
+import { useDebounce } from '../../hooks/useDebounce';
+import { groupApi, companyApi } from '../../services/api';
 import type { Company, CompanyGroup } from '../../types/api';
 
 interface GroupCompaniesViewProps {
   group: CompanyGroup;
   companies: Company[];
-  availableCompanies: Company[];
   onBack: () => void;
   onDeleteCompany: (groupId: string, companyId: string) => void;
   onAddCompanies: (groupId: string, companyIds: string[]) => void;
@@ -106,7 +106,6 @@ function SortableCompanyCard({ company, onDelete, onView }: SortableCompanyCardP
 const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
   group,
   companies,
-  availableCompanies,
   onDeleteCompany,
   onAddCompanies,
 }) => {
@@ -116,15 +115,41 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortedCompanies, setSortedCompanies] = useState(companies);
+  const [availableCompanies, setAvailableCompanies] = useState<Company[]>([]);
+  const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; companyId: string | null }>({
     isOpen: false,
     companyId: null,
   });
 
+  // Debounce search term for API calls
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   // Update sorted companies when companies prop changes
   React.useEffect(() => {
     setSortedCompanies(companies);
   }, [companies]);
+
+  // Fetch available companies when modal opens or search changes
+  useEffect(() => {
+    if (!showAddModal) return;
+
+    const fetchAvailableCompanies = async () => {
+      setIsLoadingCompanies(true);
+      try {
+        const results = await companyApi.searchAvailable(debouncedSearchTerm, 100);
+        setAvailableCompanies(results);
+      } catch (err) {
+        console.error('Failed to fetch companies:', err);
+        showError('Erreur lors du chargement des entreprises');
+        setAvailableCompanies([]);
+      } finally {
+        setIsLoadingCompanies(false);
+      }
+    };
+
+    fetchAvailableCompanies();
+  }, [showAddModal, debouncedSearchTerm, showError]);
 
   // Setup drag and drop sensors
   const sensors = useSensors(
@@ -169,16 +194,9 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
     }
   }, [group.id, companies, success, showError]);
 
-  // Filter companies that are not already in the group
-  const companiesNotInGroup = availableCompanies.filter(
+  // Filter out companies that are already in the group
+  const filteredCompanies = availableCompanies.filter(
     (company) => !companies.some((c) => c.id === company.id)
-  );
-
-  // Filter available companies based on search term
-  const filteredCompanies = companiesNotInGroup.filter(
-    (company) =>
-      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (company.vat || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteCompany = (companyId: string) => {
@@ -215,10 +233,18 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
         setSelectedCompanies([]);
         setShowAddModal(false);
         setSearchTerm('');
+        setAvailableCompanies([]);
       } catch (err) {
         showError('Erreur lors de l\'ajout des entreprises au groupe');
       }
     }
+  };
+
+  const handleCloseModal = () => {
+    setShowAddModal(false);
+    setSelectedCompanies([]);
+    setSearchTerm('');
+    setAvailableCompanies([]);
   };
 
   const toggleCompanySelection = (companyId: string) => {
@@ -289,11 +315,7 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
               <div className="flex justify-between items-center">
                 <h3 className="text-lg sm:text-xl font-semibold">Ajouter des entreprises</h3>
                 <button
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setSelectedCompanies([]);
-                    setSearchTerm('');
-                  }}
+                  onClick={handleCloseModal}
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
                 >
                   <X className="w-5 h-5" />
@@ -311,37 +333,52 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
                 />
               </div>
 
-              {/* Companies List */}
-              <div className="space-y-2">
-                {filteredCompanies.length === 0 ? (
-                  <div className="text-center py-6 sm:py-8 text-sm sm:text-base text-gray-500">
-                    {searchTerm
-                      ? 'Aucune entreprise trouvée'
-                      : 'Toutes les entreprises sont déjà dans ce groupe'}
-                  </div>
-                ) : (
-                  filteredCompanies.map((company) => (
-                    <label
-                      key={company.id}
-                      className="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedCompanies.includes(company.id)}
-                        onChange={() => toggleCompanySelection(company.id)}
-                        className="mr-3 mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm sm:text-base text-gray-900 break-words">{company.name}</div>
-                        <div className="text-xs sm:text-sm text-gray-600 break-all">TVA: {company.vat || 'N/A'}</div>
-                        {company.activities?.sectors && company.activities.sectors.length > 0 && (
-                          <div className="text-xs sm:text-sm text-gray-500 truncate">{company.activities.sectors[0]}</div>
-                        )}
-                      </div>
-                    </label>
-                  ))
-                )}
-              </div>
+              {/* Loading State */}
+              {isLoadingCompanies ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                  <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                  <p className="text-sm">Recherche en cours...</p>
+                </div>
+              ) : (
+                /* Companies List */
+                <div className="space-y-2">
+                  {filteredCompanies.length === 0 ? (
+                    <div className="text-center py-6 sm:py-8 text-sm sm:text-base text-gray-500">
+                      {searchTerm
+                        ? 'Aucune entreprise trouvée'
+                        : 'Toutes les entreprises sont déjà dans ce groupe'}
+                    </div>
+                  ) : (
+                    <>
+                      {filteredCompanies.map((company) => (
+                        <label
+                          key={company.id}
+                          className="flex items-start p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCompanies.includes(company.id)}
+                            onChange={() => toggleCompanySelection(company.id)}
+                            className="mr-3 mt-0.5 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm sm:text-base text-gray-900 break-words">{company.name}</div>
+                            <div className="text-xs sm:text-sm text-gray-600 break-all">TVA: {company.vat || 'N/A'}</div>
+                            {company.activities?.sectors && company.activities.sectors.length > 0 && (
+                              <div className="text-xs sm:text-sm text-gray-500 truncate">{company.activities.sectors[0]}</div>
+                            )}
+                          </div>
+                        </label>
+                      ))}
+                      {filteredCompanies.length === 100 && (
+                        <div className="text-center py-3 text-xs sm:text-sm text-gray-500">
+                          Affichage des 100 premiers résultats. Affinez votre recherche pour trouver plus d'entreprises.
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="p-4 sm:p-6 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 flex-shrink-0">
@@ -350,11 +387,7 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
               </div>
               <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
                 <button
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setSelectedCompanies([]);
-                    setSearchTerm('');
-                  }}
+                  onClick={handleCloseModal}
                   className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                 >
                   Annuler
@@ -385,7 +418,7 @@ const GroupCompaniesView: React.FC<GroupCompaniesViewProps> = ({
         message="Êtes-vous sûr de vouloir retirer cette entreprise du groupe ?"
         confirmText="Retirer"
         cancelText="Annuler"
-        variant="warning"
+        variant="danger"
       />
 
       {/* Toast Notifications */}

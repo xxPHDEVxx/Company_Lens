@@ -13,6 +13,7 @@ export const useCurrentUser = () => {
     queryFn: authApi.getCurrentUser,
     retry: false,
     enabled: !!localStorage.getItem('authToken'),
+    staleTime: 0,
   });
 };
 

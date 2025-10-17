@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from .models import (
-    Company, Address, Activity, Establishment, 
+    Company, Address, Activity, Establishment,
     FinancialData, CompanyFollower
 )
 from .serializers import CompanyDetailSerializer
@@ -92,7 +92,6 @@ def parse_french_date(date_str: Optional[str]) -> Optional[str]:
     return None
 
 
-# Until better integration this function will ensure the data are correctly adapted to the backend model
 @transaction.atomic
 def save_company_from_scraper_data(data: Dict[str, Any], vat_number: str) -> Company:
     """
@@ -125,9 +124,14 @@ def save_company_from_scraper_data(data: Dict[str, Any], vat_number: str) -> Com
             }
         )
 
-    # Extract finance data
-    finance_data = data.get('finance', {})
-    employees = finance_data.get('number_of_employees') if finance_data else None
+    # Extract finance data - it's a list of yearly records
+    finance_data_list = data.get('finance', [])
+
+    # Get most recent employee count from financial records
+    employees = None
+    if finance_data_list:
+        sorted_finance = sorted(finance_data_list, key=lambda x: x.get('year', 0), reverse=True)
+        employees = sorted_finance[0].get('number_of_employees')
 
     # Create or update company
     contact_data = data.get('contact', {}) or {}
@@ -213,19 +217,29 @@ def save_company_from_scraper_data(data: Dict[str, Any], vat_number: str) -> Com
             }
         )
 
-    # Save financial data if present
-    if finance_data:
-        gross_margin = finance_data.get('gross_margin')
-        if gross_margin:
-            # Store financial data (AI scraper provides summary data, not yearly)
+    # Save financial data for each year if present
+    if finance_data_list:
+        for finance_record in finance_data_list:
+            year = finance_record.get('year')
+            if not year:
+                continue  # Skip records without a year
+
+            # Map AI scraper field names to database field names
             FinancialData.objects.update_or_create(
                 company=company,
-                year=timezone.now().year,  # Use current year as default
+                year=year,
                 defaults={
-                    'revenue': gross_margin,
-                    'employees': employees,
+                    'revenue': finance_record.get('revenue'),
+                    'profit': finance_record.get('benefice'),  # AI uses 'benefice'
+                    'gross_margin': finance_record.get('gross_margin'),
+                    'total_assets': finance_record.get('total_assets'),
+                    'employees': finance_record.get('number_of_employees'),
+                    'extra_data': {
+                        'model': finance_record.get('model'),  # Store original model type
+                    }
                 }
             )
+        logger.info(f"Saved {len(finance_data_list)} financial records for {company.name}")
 
     logger.info(f"{'Created' if created else 'Updated'} company: {company.name} ({company.vat})")
     return company
@@ -293,24 +307,45 @@ def process_scraped_data(scraper_result: Dict[str, Any], vat_number: str) -> Dic
             'timestamp': timezone.now().isoformat()
         }, timeout=300)
 
-        # Update the user who requested this scraping (if any)
-        # Check cache for user_id stored during the initial request
-        user_cache_key = f"scraping_user:{clean_vat}"
-        user_id = cache.get(user_cache_key)
+        # Update the user's company association ONLY if this was an explicit association request
+        # Check cache for scraping context stored during the initial request
+        context_key = f"scraping_context:{clean_vat}"
+        scraping_context = cache.get(context_key)
 
-        if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                user.company_id = company.id
-                user.save()
+        if scraping_context:
+            action_type = scraping_context.get('action_type', 'search')
+            user_id = scraping_context.get('user_id')
+
+            logger.info(
+                f"Retrieved scraping context for VAT {clean_vat}: "
+                f"action_type={action_type}, user_id={user_id}"
+            )
+
+            # Only associate company with user if this was an explicit association request
+            if action_type == 'associate' and user_id:
+                try:
+                    user = User.objects.get(id=user_id)
+                    user.company_id = company.id
+                    user.save()
+                    logger.info(
+                        f"ASSOCIATION: Updated user {user.email} (ID: {user_id}) with "
+                        f"company_id {company.id} after explicit association request for VAT {clean_vat}"
+                    )
+                except User.DoesNotExist:
+                    logger.warning(f"User {user_id} not found when trying to update company_id")
+            elif action_type == 'search':
                 logger.info(
-                    f"Updated user {user.email} (ID: {user_id}) with company_id {company.id} "
-                    f"after successful scraping of VAT {clean_vat}"
+                    f"SEARCH: NOT updating user association for VAT {clean_vat} "
+                    f"(user_id: {user_id}) - this was a search, not an association request"
                 )
-                # Clean up cache
-                cache.delete(user_cache_key)
-            except User.DoesNotExist:
-                logger.warning(f"User {user_id} not found when trying to update company_id")
+
+            # Clean up cache
+            cache.delete(context_key)
+        else:
+            logger.info(
+                f"No scraping context found for VAT {clean_vat} - "
+                "no user association will be performed"
+            )
 
         logger.info(f"Successfully processed and saved company data for VAT: {clean_vat}")
         return result_data
@@ -337,7 +372,11 @@ def process_scraped_data(scraper_result: Dict[str, Any], vat_number: str) -> Dic
     time_limit=300,
     soft_time_limit=240
 )
-def fetch_company_data_async(vat_number: str, user_id: Optional[int] = None) -> Dict[str, Any]:
+def fetch_company_data_async(
+    vat_number: str,
+    user_id: Optional[int] = None,
+    action_type: str = 'search'
+) -> Dict[str, Any]:
     """
     Async Celery task that orchestrates company data fetching using task callbacks.
     This task launches the AI scraper with a callback to process the results.
@@ -345,11 +384,15 @@ def fetch_company_data_async(vat_number: str, user_id: Optional[int] = None) -> 
     Args:
         vat_number: Belgian VAT number (format: BE0123456789)
         user_id: Optional user ID who requested the fetch
+        action_type: Type of action - 'search' (don't associate) or 'associate' (associate with user)
 
     Returns:
         Dict with task information
     """
-    logger.info(f"Starting async company data fetch for VAT: {vat_number}")
+    logger.info(
+        f"Starting async company data fetch for VAT: {vat_number} "
+        f"(action_type: {action_type}, user_id: {user_id})"
+    )
 
     # Check if we have recent data in cache
     cache_key = f"company_data:{vat_number}"
@@ -386,11 +429,19 @@ def fetch_company_data_async(vat_number: str, user_id: Optional[int] = None) -> 
 
         from celery import current_app
 
-        # Store user_id in cache if provided, so we can update the user after scraping
-        if user_id:
-            cache_key = f"scraping_user:{vat_number}"
-            cache.set(cache_key, user_id, timeout=3600)  # 1 hour timeout
-            logger.info(f"Stored user_id {user_id} in cache for VAT: {vat_number}")
+        # Store scraping context in cache for the callback
+        # This includes user_id and action_type to determine behavior after scraping
+        if user_id and action_type == 'associate':
+            # Only store user context if this is an explicit association request
+            context_key = f"scraping_context:{vat_number}"
+            cache.set(context_key, {
+                'user_id': user_id,
+                'action_type': action_type
+            }, timeout=3600)  # 1 hour timeout
+            logger.info(
+                f"Stored scraping context for VAT: {vat_number} - "
+                f"action_type: {action_type}, user_id: {user_id}"
+            )
 
         # Send AI scraper task (it will manually trigger the callback when done)
         result = current_app.send_task(
@@ -415,5 +466,50 @@ def fetch_company_data_async(vat_number: str, user_id: Optional[int] = None) -> 
             'error': str(e),
             'vat_number': vat_number
         }
+
+
+@shared_task(name='companies.tasks.weekly_update_all_companies')
+def weekly_update_all_companies() -> Dict[str, Any]:
+    """
+    Weekly task to update all companies in database by re-scraping their data.
+    Runs every Sunday at midnight (configured in CELERY_BEAT_SCHEDULE).
+
+    Returns:
+        Dict with summary of update results
+    """
+    logger.info(f"Starting weekly update of all companies at {timezone.now()}")
+
+    # Get all companies
+    companies = Company.objects.all()
+    total_companies = companies.count()
+
+    queued_count = 0
+    failed_count = 0
+    failed_vats = []
+
+    for company in companies:
+        try:
+            # Trigger scraping task for this company
+            # This will update the company data with fresh scraped information
+            # Important: No user_id and action_type='search' to avoid changing associations
+            fetch_company_data_async.delay(company.vat, action_type='search')
+            queued_count += 1
+            logger.info(f"Queued update for company: {company.name} ({company.vat})")
+        except Exception as e:
+            failed_count += 1
+            failed_vats.append(company.vat)
+            logger.error(f"Failed to queue update for company {company.vat}: {e}")
+
+    result = {
+        'status': 'success',
+        'total_companies': total_companies,
+        'queued_for_update': queued_count,
+        'failed': failed_count,
+        'failed_vats': failed_vats,
+        'timestamp': timezone.now().isoformat()
+    }
+
+    logger.info(f"Weekly update completed: {result}")
+    return result
 
 

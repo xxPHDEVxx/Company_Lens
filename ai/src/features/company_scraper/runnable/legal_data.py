@@ -58,11 +58,11 @@ class LegalDataExtractor:
         except Exception as e:
             logging.error(f"Error in complete_address: {e}", exc_info=True)
 
-    def complete_financial_and_size(self) -> Optional[AnnualAccountData]:
+    def complete_financial_and_size(self) -> Optional[list[FinancialSchema]]:
         """
-        Fetches financial data for the company.
+        Fetches financial data for the last 3 years.
 
-        :return: A FinancialSchema object with extracted data.
+        :return: List of FinancialSchema objects (one per year) or None if not found
         """
         return FinancialDataExtractor(self.vat_number).extract()
 
@@ -83,17 +83,16 @@ class LegalDataExtractor:
         """
         return GeneralInformationExtractor(self.vat_number).extract()
 
-    def parallel_execution(self) -> LegalDataProcess:
+    def parallel_execution(self) -> tuple[LegalDataProcess, Optional[list[FinancialSchema]]]:
         """
         Executes financial, general information, and establishment units methods in parallel.
 
         Runs the three methods concurrently using ThreadPoolExecutor, handles exceptions and timeouts,
         and processes the results. Returns:
-        - Financial data (or None),
-        - Establishment units as a list,
-        - Concatenated string (`llm_content`) from general info and establishment units (text parts).
+        - LegalDataProcess with financial data for size calculation
+        - List of FinancialSchema for all 3 years
 
-        :return: LegalDataProcess schema
+        :return: Tuple of (LegalDataProcess, list of FinancialSchema)
         """
         with ThreadPoolExecutor(max_workers=3) as executor:
             # Define tasks and submit them
@@ -116,9 +115,20 @@ class LegalDataExtractor:
                     results[name] = None
 
         # Extract individual results
-        financial_data_and_size: AnnualAccountData | None = results.get(
-            "financial_data_and_size"
-        )
+        financial_list: list[FinancialSchema] | None = results.get("financial_data_and_size")
+
+        # Convert most recent FinancialSchema to AnnualAccountData for size calculation
+        annual_data = None
+        if financial_list and len(financial_list) > 0:
+            most_recent = financial_list[0]
+            annual_data = AnnualAccountData(
+                model=most_recent.model or "",
+                employees=most_recent.number_of_employees or 0,
+                previous_year_revenue=most_recent.revenue or 0,
+                total_asset=most_recent.total_assets or 0,
+                gross_margin=most_recent.gross_margin or 0
+            )
+
         general_info: str = results.get("general_info")
         establishment_units: EstablishmentUnitData = results.get("establishment_units")
 
@@ -130,10 +140,13 @@ class LegalDataExtractor:
         ]
         llm_content = "\n---\n".join(llm_parts) if llm_parts else None
 
-        return LegalDataProcess(
-            financial_data_and_size=financial_data_and_size,
-            establishment_units_list=establishment_units.units,
-            llm_content=llm_content,
+        return (
+            LegalDataProcess(
+                financial_data_and_size=annual_data,
+                establishment_units_list=establishment_units.units,
+                llm_content=llm_content,
+            ),
+            financial_list
         )
 
     @traceable
@@ -157,7 +170,7 @@ class LegalDataExtractor:
         :return: A structured CompanySchema object if data is successfully extracted, otherwise None.
         """
         logging.info(f"Starting data extraction for VAT number: {self.vat_number}")
-        legal_data_process = self.parallel_execution()
+        legal_data_process, financial_list = self.parallel_execution()
         general_information = self.extract_company_data(legal_data_process.llm_content)
         operating_hq_address = self.__address_resolver.resolve_single(
             general_information.address
@@ -192,6 +205,7 @@ class LegalDataExtractor:
             logging.warning(
                 f"No establishment units found for VAT number: {self.vat_number}"
             )
+
         return CompanySchema(
             name=general_information.name,
             vat_number=self.vat_number,
@@ -204,13 +218,6 @@ class LegalDataExtractor:
             address=operating_hq_address,
             activity=general_information.activity,
             contact=general_information.contact,
-            finance=(
-                FinancialSchema(
-                    gross_margin=legal_data_process.financial_data_and_size.gross_margin,
-                    number_of_employees=legal_data_process.financial_data_and_size.employees,
-                )
-                if legal_data_process.financial_data_and_size
-                else None
-            ),
+            finance=financial_list,  # Now a list of FinancialSchema
             establishment_units=establishment_units,
         )

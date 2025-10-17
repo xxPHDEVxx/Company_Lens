@@ -24,8 +24,8 @@ const getAuthHeaders = (): HeadersInit => {
 
 // Company APIs
 export const companyApi = {
-  getAll: async (): Promise<Company[]> => {
-    const response = await fetch(`${API_BASE_URL}/companies/`, {
+  getAll: async (pageSize: number = 200): Promise<Company[]> => {
+    const response = await fetch(`${API_BASE_URL}/companies/?page_size=${pageSize}`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to fetch companies');
@@ -91,6 +91,25 @@ export const companyApi = {
       error.message = data.message || 'Recherche en cours...';
       throw error;
     }
+
+    if (!response.ok) throw new Error('Failed to search companies');
+    const data = await response.json();
+    // Transform and handle paginated response
+    const transformed = transformResponse(data);
+    return transformed.results || transformed;
+  },
+
+  // Simple search for modals - searches by name or VAT, returns limited results
+  searchAvailable: async (query: string, pageSize: number = 100): Promise<Company[]> => {
+    const params = new URLSearchParams();
+    if (query.trim()) {
+      params.append('search', query);
+    }
+    params.append('page_size', pageSize.toString());
+
+    const response = await fetch(`${API_BASE_URL}/companies/?${params}`, {
+      headers: getAuthHeaders(),
+    });
 
     if (!response.ok) throw new Error('Failed to search companies');
     const data = await response.json();
@@ -416,6 +435,20 @@ export const authApi = {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error('Failed to remove company');
+    const data = await response.json();
+    return transformResponse(data);
+  },
+
+  updateProfile: async (userData: Partial<User>): Promise<User> => {
+    const response = await fetch(`${API_BASE_URL}/users/profile/`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(transformRequest(userData)),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to update profile');
+    }
     const data = await response.json();
     return transformResponse(data);
   },

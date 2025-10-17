@@ -76,10 +76,6 @@ const HeroSection = () => {
           </div>
           <div className="flex items-center">
             <Icons.checkCircle className="h-5 w-5 text-green-500 mr-2" />
-            Aucune carte requise
-          </div>
-          <div className="flex items-center">
-            <Icons.checkCircle className="h-5 w-5 text-green-500 mr-2" />
             Support prochainement disponible
           </div>
         </div>

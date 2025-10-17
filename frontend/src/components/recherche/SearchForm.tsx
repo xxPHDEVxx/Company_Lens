@@ -13,6 +13,7 @@ interface SearchFormProps {
   onFilterChange: (key: keyof SearchFilters, value: string) => void;
   onSearch: () => void;
   isSearching: boolean;
+  vatError?: string;
 }
 
 const SearchForm: React.FC<SearchFormProps> = ({
@@ -20,6 +21,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
   onFilterChange,
   onSearch,
   isSearching,
+  vatError,
 }) => {
   const handleClearFilters = () => {
     onFilterChange('vatNumber', '');
@@ -36,6 +38,7 @@ const SearchForm: React.FC<SearchFormProps> = ({
         onChange={(value) => onFilterChange('vatNumber', value)}
         onSearch={onSearch}
         isSearching={isSearching}
+        error={vatError}
       />
 
       {/* Filters Row */}

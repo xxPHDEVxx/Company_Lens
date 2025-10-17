@@ -25,6 +25,8 @@ class WebClient:
             logger.debug("No proxy manager set up for web client")
 
     def _ensure_url_scheme(self, url: str) -> str:
+        if url is None or not url:
+            raise ValueError("URL cannot be None or empty")
         if not url.startswith(("http://", "https://")):
             logger.warning(f"URL missing scheme, prepending 'http://': {url}")
             return "http://" + url

@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from companies.utils import normalize_vat, validate_vat
 
 User = get_user_model()
 
@@ -9,14 +10,31 @@ User = get_user_model()
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile data."""
 
+    # Add company name from the associated company
+    company_name = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
-            'id', 'email', 'name', 'company_id', 'phone',
+            'id', 'email', 'name', 'company_id', 'company_name', 'phone',
             'avatar', 'bio', 'language', 'email_notifications',
             'is_company_user', 'date_joined'
         ]
-        read_only_fields = ['id', 'email', 'company_id', 'is_company_user', 'date_joined']
+        read_only_fields = ['id', 'email', 'company_id', 'company_name', 'is_company_user', 'date_joined']
+
+    def get_company_name(self, obj):
+        """Get the company name from the company_id."""
+        if not obj.company_id:
+            return None
+
+        # Import here to avoid circular imports
+        from companies.models import Company
+
+        try:
+            company = Company.objects.get(vat=obj.company_id)
+            return company.name
+        except Company.DoesNotExist:
+            return None
 
 
 class AssociateCompanySerializer(serializers.Serializer):
@@ -29,22 +47,19 @@ class AssociateCompanySerializer(serializers.Serializer):
     )
 
     def validate_company_vat(self, value):
-        """Normalize and validate VAT number."""
-        # Remove spaces and dots
-        vat = value.upper().replace(' ', '').replace('.', '')
+        """
+        Normalize and validate VAT number.
 
-        # Add BE prefix if missing
-        if not vat.startswith('BE'):
-            vat = 'BE' + vat.lstrip('0')
+        Uses centralized VAT utility for consistent normalization across the app.
+        """
+        try:
+            normalized_vat = normalize_vat(value)
 
-        # Ensure BE + 10 digits format
-        if vat.startswith('BE') and len(vat) < 12:
-            vat = 'BE' + vat[2:].zfill(10)
+            # Double-check the normalized value is valid
+            if not validate_vat(normalized_vat):
+                raise ValueError("Normalization produced invalid VAT")
 
-        # Validate format
-        if not vat.startswith('BE') or len(vat) != 12:
-            raise serializers.ValidationError(
-                'Invalid VAT format. Expected BE + 10 digits (e.g., BE0123456789)'
-            )
+            return normalized_vat
 
-        return vat
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))

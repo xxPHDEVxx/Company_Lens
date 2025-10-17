@@ -190,7 +190,7 @@ const GroupesContent = () => {
               }}
               getGroupIcon={getGroupIcon}
               groupIcons={groupIcons}
-              isLoading={createGroupMutation.isLoading || updateGroupMutation.isLoading}
+              isLoading={createGroupMutation.isPending || updateGroupMutation.isPending}
             />
           )}
 
@@ -240,7 +240,7 @@ const GroupesContent = () => {
             confirmText="Supprimer"
             cancelText="Annuler"
             variant="danger"
-            isLoading={deleteGroupMutation.isLoading}
+            isLoading={deleteGroupMutation.isPending}
           />
 
           {/* Toast Notifications */}

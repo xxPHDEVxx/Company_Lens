@@ -39,7 +39,7 @@ class FinancialDataInline(admin.TabularInline):
     """Inline admin for Financial Data."""
     model = FinancialData
     extra = 0
-    fields = ['year', 'revenue', 'profit', 'margin', 'employees']
+    fields = ['year', 'revenue', 'profit', 'margin', 'gross_margin', 'total_assets', 'employees']
     ordering = ['-year']
 
 
@@ -119,7 +119,7 @@ class EstablishmentAdmin(admin.ModelAdmin):
 
 @admin.register(FinancialData)
 class FinancialDataAdmin(admin.ModelAdmin):
-    list_display = ['company', 'year', 'revenue', 'profit', 'margin', 'employees']
+    list_display = ['company', 'year', 'revenue', 'profit', 'margin', 'gross_margin', 'total_assets', 'employees']
     list_filter = ['year']
     search_fields = ['company__name', 'company__vat']
     raw_id_fields = ['company']

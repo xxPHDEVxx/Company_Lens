@@ -10,6 +10,7 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config, Csv
 import dj_database_url
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -142,8 +143,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+    'DEFAULT_PAGINATION_CLASS': 'company_lens.pagination.StandardResultsSetPagination',
+    'PAGE_SIZE': 200,
+    'MAX_PAGE_SIZE': 500,  # Maximum allowed items per page
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
@@ -156,7 +158,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S.%fZ',
+    'DATETIME_FORMAT': 'iso-8601',  # Proper ISO format with timezone offset
     'DATE_FORMAT': '%Y-%m-%d',
 }
 
@@ -340,3 +342,14 @@ AI_SCRAPER_TIMEOUT = config('AI_SCRAPER_TIMEOUT', default=120, cast=int)  # 2 mi
 COMPANY_FETCH_RETRY_DELAY = 300  # 5 minutes between retries
 COMPANY_FETCH_MAX_RETRIES = 3
 COMPANY_DATA_CACHE_TTL = 86400  # 24 hours
+
+# Celery Beat periodic tasks configuration
+CELERY_BEAT_SCHEDULE = {
+    'weekly-update-all-companies': {
+        'task': 'companies.tasks.weekly_update_all_companies',
+        'schedule': crontab(hour=0, minute=0, day_of_week=0),  # Sunday at midnight
+        'options': {
+            'expires': 3600,  # Task expires after 1 hour if not picked up
+        }
+    },
+}

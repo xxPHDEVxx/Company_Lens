@@ -29,6 +29,8 @@ export interface FinancialData {
   revenue?: number;
   profit?: number;
   margin?: number;
+  totalAssets?: number;  // camelCase to match API
+  grossMargin?: number;  // camelCase to match API
   employees?: number;
 }
 
@@ -116,6 +118,9 @@ export interface User {
   email: string;
   name: string;
   companyId?: string;
+  company_name?: string;
+  phone?: string;
+  date_joined?: string;
 }
 
 export interface AuthResponse {

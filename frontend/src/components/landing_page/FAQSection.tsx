@@ -15,22 +15,17 @@ const faqs = [
   {
     id: 3,
     question: 'Les données sont-elles à jour ?',
-    answer: 'Oui, nos données sont mises à jour quotidiennement depuis les sources officielles. Nous garantissons une fraîcheur maximale des informations pour vous assurer des analyses fiables.',
+    answer: 'Oui, nos données sont mises à jour chaque semaine depuis les sources officielles. Nous garantissons une mise à jour des informations pour vous assurer des analyses fiables.',
   },
   {
     id: 4,
-    question: 'Y a-t-il une période d\'essai gratuite ?',
-    answer: 'Absolument ! Nous offrons une période d\'essai gratuite de 14 jours sans engagement. Aucune carte bancaire n\'est requise pour commencer, et vous pouvez annuler à tout moment.',
-  },
-  {
-    id: 5,
     question: 'Company Lens est-il conforme au RGPD ?',
     answer: 'Oui, Company Lens est entièrement conforme au RGPD. Nous ne traitons que des données publiques d\'entreprises et respectons toutes les réglementations européennes en matière de protection des données.',
   },
   {
-    id: 6,
+    id: 5,
     question: 'Puis-je intégrer Company Lens à mes outils existants ?',
-    answer: 'Oui, nous proposons une API complète qui vous permet d\'intégrer nos données directement dans vos systèmes CRM, ERP ou autres outils métier. Notre équipe technique peut vous accompagner dans l\'intégration.',
+    answer: 'Oui, nous proposerons une API complète qui vous permettra d\'intégrer nos données directement dans vos systèmes CRM, ERP ou autres outils métier.',
   },
 ];
 
@@ -96,29 +91,6 @@ const FAQSection = () => {
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* Contact section */}
-          <div className="mt-16 text-center">
-            <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 p-8">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                Vous avez d'autres questions ?
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Notre équipe d'experts est là pour vous aider. Contactez-nous et obtenez une réponse personnalisée.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button className="inline-flex items-center px-6 py-3 text-base font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg hover:from-blue-700 hover:to-indigo-700 transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                  <Icons.mail className="mr-2 h-5 w-5" />
-                  Nous contacter
-                </button>
-                
-                <button className="inline-flex items-center px-6 py-3 text-base font-medium text-blue-600 bg-white rounded-lg border border-blue-200 hover:bg-blue-50 transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                  <Icons.chat className="mr-2 h-5 w-5" />
-                  Chat en direct
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
