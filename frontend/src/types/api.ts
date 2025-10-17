@@ -29,6 +29,8 @@ export interface FinancialData {
   revenue?: number;
   profit?: number;
   margin?: number;
+  totalAssets?: number;  // camelCase to match API
+  grossMargin?: number;  // camelCase to match API
   employees?: number;
 }
 
