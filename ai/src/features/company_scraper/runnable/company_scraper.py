@@ -32,8 +32,10 @@ def run(fields: ScrapeCompanyDto) -> CompanySchema:
         return None
 
     website_extractor = CompanyWebsiteExtractor()
-    if fields.website:
-        company_description = website_extractor.complete_schema(fields.website)
+    if company_data.contact.website:
+        company_description = website_extractor.complete_schema(
+            company_data.contact.website
+        )
         company_data.company_description = company_description.description
         company_data.activity.sectors = company_description.sectors
         company_data.activity.services = company_description.services
