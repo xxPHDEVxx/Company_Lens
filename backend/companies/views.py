@@ -226,7 +226,12 @@ class CompanyViewSet(viewsets.ModelViewSet):
                     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 # Launch task asynchronously (returns immediately)
-                task = fetch_company_data_async.delay(clean_vat, user_id=request.user.id)
+                # Pass action_type='search' to indicate this is NOT an association
+                task = fetch_company_data_async.delay(
+                    clean_vat,
+                    user_id=request.user.id,
+                    action_type='search'  # Important: This is a search, not an association
+                )
 
                 # Store fetch status in cache
                 cache.set(fetch_status_key, {

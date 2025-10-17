@@ -100,9 +100,13 @@ class AssociateCompanyView(APIView):
                 f"Company {vat_number} not found. Launching scraper for user {request.user.email}"
             )
 
-            # Launch async scraper task with user_id
+            # Launch async scraper task with user_id and action_type='associate'
             # The user's company_id will be updated automatically once scraping completes
-            task = fetch_company_data_async.delay(vat_number, request.user.id)
+            task = fetch_company_data_async.delay(
+                vat_number,
+                user_id=request.user.id,
+                action_type='associate'  # Important: This is an explicit association request
+            )
 
             return Response({
                 'status': 'pending',
